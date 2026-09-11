@@ -5,13 +5,12 @@ import { G, GO, R, M, CREAM, GOLD, CARD, CARD2, FB, FD } from "../constants/them
 import { auth } from "../firebase/client";
 import { winsFor, winYearsFor } from "../constants/champions";
 
-// Small trophy row — one icon per win, capped visually with "+N" beyond 3.
+// Trophy badge — a single icon, with a ×N multiplier for repeat champions.
 function TrophyBadge({ count, size = 12 }) {
   if (!count) return null;
-  const shown = Math.min(count, 3);
   return (
-    <span style={{ fontSize: `${size}px`, letterSpacing: "-2px", flexShrink: 0 }} title={`${count} championship${count === 1 ? "" : "s"}`}>
-      {"🏆".repeat(shown)}{count > 3 ? ` +${count - 3}` : ""}
+    <span style={{ fontSize: `${size}px`, fontWeight: 700, color: GOLD, display: "inline-flex", alignItems: "center", gap: "2px", flexShrink: 0 }} title={`${count} championship${count === 1 ? "" : "s"}`}>
+      🏆{count > 1 && <span>×{count}</span>}
     </span>
   );
 }

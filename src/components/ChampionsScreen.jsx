@@ -1,18 +1,11 @@
 import { useMemo } from "react";
 import { CHAMPIONS } from "../constants/champions";
-import { G, GO, M, CREAM, GOLD, CARD2, FB, FD } from "../constants/theme";
+import { G, M, CREAM, GOLD, CARD2, FD } from "../constants/theme";
 
 export default function ChampionsScreen() {
   const sorted = useMemo(() => [...CHAMPIONS].sort((a, b) => b.year - a.year), []);
   const latest = sorted[0];
   const rest = sorted.slice(1);
-
-  // Most titles — counts every name across all years, not just current roster.
-  const leaderboard = useMemo(() => {
-    const counts = {};
-    CHAMPIONS.forEach(c => c.names.forEach(n => { counts[n] = (counts[n] || 0) + 1; }));
-    return Object.entries(counts).filter(([, n]) => n > 1).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-  }, []);
 
   return (
     <div style={{ maxWidth: "700px", margin: "0 auto", padding: "20px 14px 60px" }}>
@@ -36,27 +29,6 @@ export default function ChampionsScreen() {
           </div>
           <div style={{ fontFamily: FD, fontSize: "26px", fontWeight: 700, color: "#fff", marginTop: "4px" }}>
             {latest.names.join(" & ")}
-          </div>
-        </div>
-      )}
-
-      {/* Most titles */}
-      {leaderboard.length > 0 && (
-        <div style={{ background: CARD2, border: `1px solid ${GOLD}33`, borderRadius: "12px", padding: "14px 16px", marginBottom: "20px" }}>
-          <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: M, marginBottom: "10px" }}>
-            Most Titles
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-            {leaderboard.map(([name, n]) => (
-              <div key={name} style={{
-                display: "flex", alignItems: "center", gap: "5px", background: GOLD + "14",
-                border: `1px solid ${GOLD}33`, borderRadius: "8px", padding: "5px 10px",
-                fontSize: "13px", fontWeight: 600, color: CREAM,
-              }}>
-                <span>{name}</span>
-                <span style={{ color: GOLD, letterSpacing: "-1px" }}>{"🏆".repeat(Math.min(n, 5))}</span>
-              </div>
-            ))}
           </div>
         </div>
       )}
