@@ -726,7 +726,7 @@ function TiebreakerManager({ league, teamStandings, saveLeague }) {
   );
 }
 
-export default function AdminScreen({ league, knockdownPairs, qfPairs, sfPairs, finalPairs, saveLeague, unlockMatch, clearMatch, clearSeason, isAdmin, adminPin, adminUnlock, adminLock, saveAdminPin, teamStandings, potyList, weeklyTeamPts, createSnapshot, listSnapshots, restoreSnapshot, match, setMatch, activeWeek, activeTeam, cancelledWeeks, toggleCancelWeek }) {
+export default function AdminScreen({ league, knockdownPairs, qfPairs, sfPairs, finalPairs, saveLeague, unlockMatch, clearMatch, clearSeason, isAdmin, adminPin, adminUnlock, adminLock, saveAdminPin, teamStandings, potyList, createSnapshot, listSnapshots, restoreSnapshot, match, setMatch, activeWeek, activeTeam, cancelledWeeks, toggleCancelWeek }) {
   const printYears = Object.keys(PRINT_SCHEDULES).map(Number).sort();
   const [printYear, setPrintYear] = useState(printYears[printYears.length - 1] || SEASON_YEAR);
 
@@ -1488,61 +1488,6 @@ export default function AdminScreen({ league, knockdownPairs, qfPairs, sfPairs, 
           </div>
         </AccordionSection>
       )}
-
-      {/* ── Weekly Points Table ── hidden for 2026 (unused); remove at season-end cleanup ── */}
-      {false && weeklyTeamPts && (() => {
-        const weeksWithData = [];
-        for (let w = 1; w <= 17; w++) {
-          if (Object.values(weeklyTeamPts).some(tw => tw[w] != null)) weeksWithData.push(w);
-        }
-        if (!weeksWithData.length) return null;
-        const sorted = [...teamStandings];
-        return (
-          <AccordionSection
-            id="weekly-pts" open={isOpen("weekly-pts")} onToggle={toggleSection}
-            title="Weekly Points Table" icon="📊"
-            hint={`${weeksWithData.length} weeks`}
-          >
-            <div style={{ overflowX: "auto", marginTop: "10px" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px", fontFamily: FB }}>
-                <thead>
-                  <tr style={{ borderBottom: `1px solid ${GOLD}33` }}>
-                    <th style={{ textAlign: "left", padding: "5px 8px", color: GOLD, fontWeight: 600, whiteSpace: "nowrap", position: "sticky", left: 0, background: CARD }}>Team</th>
-                    {weeksWithData.map(w => (
-                      <th key={w} style={{ textAlign: "center", padding: "5px 6px", color: M, fontWeight: 600, minWidth: "32px" }}>W{w}</th>
-                    ))}
-                    <th style={{ textAlign: "center", padding: "5px 8px", color: GOLD, fontWeight: 700, minWidth: "40px" }}>Tot</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sorted.map((s, i) => {
-                    const tw = weeklyTeamPts[s.id] || {};
-                    const weekTotal = weeksWithData.reduce((sum, w) => sum + (tw[w]?.totalPts || 0), 0);
-                    return (
-                      <tr key={s.id} style={{ borderBottom: `1px solid ${GOLD}11`, background: i % 2 === 0 ? "transparent" : `${GOLD}08` }}>
-                        <td style={{ padding: "5px 8px", color: CREAM, whiteSpace: "nowrap", position: "sticky", left: 0, background: i % 2 === 0 ? CARD : `${GOLD}12` }}>
-                          <span style={{ fontSize: "10px", color: M, marginRight: "5px" }}>T{s.id}</span>
-                          {TEAMS[s.id]?.name || `Team ${s.id}`}
-                        </td>
-                        {weeksWithData.map(w => {
-                          const entry = tw[w];
-                          return (
-                            <td key={w} style={{ textAlign: "center", padding: "5px 6px", color: entry ? CREAM : M }}>
-                              {entry ? <span title={`Match: ${entry.matchPts}  Bonus: ${entry.bonusPts}`}>{entry.totalPts}</span> : "—"}
-                            </td>
-                          );
-                        })}
-                        <td style={{ textAlign: "center", padding: "5px 8px", color: GOLD, fontWeight: 700 }}>{weekTotal || "—"}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ fontSize: "10px", color: M, marginTop: "8px" }}>Hover a cell to see match vs bonus split</div>
-          </AccordionSection>
-        );
-      })()}
 
       {/* ── Round Replay ─────────────────────────────────────────── */}
       <AccordionSection

@@ -61,11 +61,8 @@ import AdminScreen from "./components/AdminScreen";
 import PlayoffScreen from "./components/PlayoffScreen";
 import LiveScreen from "./components/LiveScreen";
 import RecapScreen from "./components/RecapScreen";
-import MastersBoard from "./components/MastersBoard";
 import PlayerScreen from "./components/PlayerScreen";
 import StatsScreen from "./components/StatsScreen";
-import PredictScreen from "./components/PredictScreen";
-import PulseScreen from "./components/PulseScreen";
 import ContactsScreen from "./components/ContactsScreen";
 import ChampionsScreen from "./components/ChampionsScreen";
 import ConfirmedScoresScreen from "./components/ConfirmedScoresScreen";
@@ -767,11 +764,10 @@ const [seasonYear] = useState(SEASON_YEAR);
     setMatch(fn);
   };
 
-  // Board(masters)/Predict/Pulse hidden for 2026 (unused) — code kept; delete at season-end cleanup.
   const TABS=["schedule","live","scoring","entry","standings","weekly","poty","hcp","playoffs","players","rules","admin"];
   const PRIMARY_TABS=["schedule","live","scoring","standings","players","poty","hcp","rules","contacts","weekly"].concat(league.recapEnabled?["recap"]:[]);
   const MORE_TABS=["entry","playoffs","champions","stats","admin","verify","howto"].filter(t => t !== "verify" || isAdmin);
-  const TAB_LABEL={schedule:"Schedule",live:"Live",scoring:"Scoring",entry:"Entry",standings:"Standings",masters:"Board",weekly:"Weekly",poty:"POTY",hcp:"HCP",playoffs:"Playoffs",players:"Players",contacts:"Subs",stats:"Stats",rules:"Rules",admin:"Admin",verify:"Verify",predict:"Predict",pulse:"Pulse",howto:"How To",recap:"Recap",champions:"Champions"};
+  const TAB_LABEL={schedule:"Schedule",live:"Live",scoring:"Scoring",entry:"Entry",standings:"Standings",weekly:"Weekly",poty:"POTY",hcp:"HCP",playoffs:"Playoffs",players:"Players",contacts:"Subs",stats:"Stats",rules:"Rules",admin:"Admin",verify:"Verify",howto:"How To",recap:"Recap",champions:"Champions"};
   const inMore = MORE_TABS.includes(screen);
 
   // Current match doc (for confirm/lock)
@@ -929,10 +925,6 @@ const [seasonYear] = useState(SEASON_YEAR);
         />
       )}
 
-      {screen==="masters"&&(
-        <MastersBoard league={league} />
-      )}
-
       {screen==="weekly"&&(
         <WeeklyScreen weeklyTeamPts={weeklyTeamPts} results={league.results} cancelledWeeks={cancelledWeeks} schedule={scheduleWithKnockdown} />
       )}
@@ -1022,14 +1014,6 @@ const [seasonYear] = useState(SEASON_YEAR);
         <StatsScreen league={league} />
       )}
 
-      {screen==="predict"&&(
-        <PredictScreen league={league} />
-      )}
-
-      {screen==="pulse"&&(
-        <PulseScreen league={league} />
-      )}
-
       {screen==="rules"&&(
         <RulesScreen rules={rules} saveRules={saveRules} />
       )}
@@ -1068,7 +1052,6 @@ const [seasonYear] = useState(SEASON_YEAR);
           saveAdminPin={saveAdminPin}
           teamStandings={teamStandings}
           potyList={potyList}
-          weeklyTeamPts={weeklyTeamPts}
           createSnapshot={createSnapshot}
           listSnapshots={listSnapshots}
           restoreSnapshot={restoreSnapshot}
