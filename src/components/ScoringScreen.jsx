@@ -717,10 +717,14 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
                       </div>
                       <div style={{ fontSize: "12px", color: M, marginTop: "2px", paddingLeft: "14px" }}>
                         HCP {hcp}
-                        {strokes > 0 && <span style={{ color: G }}> +{strokes} stroke</span>}
+                        {strokes > 0 && <span style={{ color: G }}> +{strokes} stroke{strokes > 1 ? "s" : ""}</span>}
                         {strokes < 0 && <span style={{ color: R }}> {strokes} stroke</span>}
-                        {" · "}
-                        <span style={{ color: r.color }}>Total: {getRunTotal(r.tIdx, r.pi, r.tid)}</span>
+                        {/* Running total is noise on the tee — play mode shows the
+                            strokes given on this hole and nothing else. */}
+                        {!playMode && <>
+                          {" · "}
+                          <span style={{ color: r.color }}>Total: {getRunTotal(r.tIdx, r.pi, r.tid)}</span>
+                        </>}
                       </div>
                     </div>
 
@@ -803,7 +807,10 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
                               {getNet(r.tIdx, r.pi, r.tid, hole)}
                             </div>
                             <div style={{ fontSize: "10px", color: M, lineHeight: 1, margin: "2px 0 3px" }}>net</div>
-                            <PtsBadge pts={pts} />
+                            <div style={{
+                              fontSize: "15px", fontWeight: 800, lineHeight: 1,
+                              color: pts > 0 ? G : pts < 0 ? R : "#1a2e1a",
+                            }}>{pts}</div>
                           </div>
                         )}
                         {gross > 0 && !playMode && (
@@ -1237,7 +1244,7 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
           )}
         </div>
       )}
-      {!isReadOnly && !isLocked && opp && mk && (
+      {!playMode && !isReadOnly && !isLocked && opp && mk && (
         <div style={{
           background: CARD2, border: `1px solid ${GOLD}22`, borderRadius: "12px",
           padding: "12px 16px", marginBottom: "12px", display: "flex", alignItems: "center",
