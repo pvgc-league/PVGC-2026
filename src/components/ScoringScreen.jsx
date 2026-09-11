@@ -628,7 +628,7 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
 
         return (<>
           {/* Hole navigation */}
-          <div style={{ display: "flex", gap: "4px", justifyContent: "center", marginBottom: "13px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "4px", justifyContent: "center", alignItems: "center", marginBottom: "13px", flexWrap: "wrap", minHeight: "44px" }}>
             {Array(9).fill(0).map((_, h) => {
               const done = rows.every(r => {
                 const type = getType(r.tIdx, r.pi);
@@ -637,10 +637,18 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
               return (
                 <button key={h} onClick={() => setHole(h)}
                   style={{
-                    width: "34px", height: "34px", borderRadius: "50%", fontFamily: FB, fontSize: "14px", cursor: "pointer",
-                    border: hole === h ? `2px solid ${GOLD}` : done ? `1px solid ${G}55` : `1px solid ${GOLD}33`,
-                    background: hole === h ? GOLD + "18" : done ? G + "0a" : "transparent",
-                    color: hole === h ? GOLD : done ? G + "cc" : M, position: "relative"
+                    // The hole you're on is filled solid green and sized up — the old
+                    // gold outline read as just another state at arm's length.
+                    width: hole === h ? "42px" : "34px",
+                    height: hole === h ? "42px" : "34px",
+                    borderRadius: "50%", fontFamily: FB, cursor: "pointer",
+                    fontSize: hole === h ? "18px" : "14px",
+                    fontWeight: hole === h ? 800 : 400,
+                    border: hole === h ? `2px solid ${G}` : done ? `1px solid ${G}55` : `1px solid ${GOLD}33`,
+                    background: hole === h ? G : done ? G + "0a" : "transparent",
+                    color: hole === h ? "#fff" : done ? G + "cc" : M,
+                    boxShadow: hole === h ? `0 2px 8px ${G}55` : "none",
+                    position: "relative", flexShrink: 0, transition: "all .12s",
                   }}>
                   {h + 1}
                   {isRain(h) && <span style={{ position: "absolute", top: 0, right: 1, fontSize: "7px", color: GO }}>R</span>}
