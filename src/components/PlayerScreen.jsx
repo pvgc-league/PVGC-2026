@@ -3,6 +3,18 @@ import { ALL_PLAYERS, TEAMS, PAR, SI, RAINOUT_SUB, SCHEDULE } from "../constants
 import { getEffectiveHcp, getEffectiveHcpRaw, getOpponent, matchKey, stabPts, hcpStr, getLoHiOrder } from "../lib/leagueLogic";
 import { G, GO, R, M, CREAM, GOLD, CARD, CARD2, FB, FD } from "../constants/theme";
 import { auth } from "../firebase/client";
+import { winsFor, winYearsFor } from "../constants/champions";
+
+// Small trophy row — one icon per win, capped visually with "+N" beyond 3.
+function TrophyBadge({ count, size = 12 }) {
+  if (!count) return null;
+  const shown = Math.min(count, 3);
+  return (
+    <span style={{ fontSize: `${size}px`, letterSpacing: "-2px", flexShrink: 0 }} title={`${count} championship${count === 1 ? "" : "s"}`}>
+      {"🏆".repeat(shown)}{count > 3 ? ` +${count - 3}` : ""}
+    </span>
+  );
+}
 
 const PROFILE_WEEKS = Array.from({ length: 21 }, (_, i) => i + 1); // full season: regular + knockdown (18) + playoffs (19-21)
 const ALL_SEASON_WEEKS = Array.from({ length: 18 }, (_, i) => i + 1); // includes knockdown (W18)
@@ -243,8 +255,9 @@ function PlayerCard({ tid, pi, league, onClick, schedule = SCHEDULE }) {
           {name?.charAt(0)}
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: "14px", fontWeight: 700, color: CREAM, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {name}
+          <div style={{ fontSize: "14px", fontWeight: 700, color: CREAM, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "5px" }}>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{name}</span>
+            <TrophyBadge count={winsFor(name)} />
           </div>
           <div style={{ fontSize: "11px", color: M, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {team?.name}
@@ -332,8 +345,16 @@ function PlayerProfile({ tid, pi, league, onBack, isAdmin, saveLeague, schedule 
           {name?.charAt(0)}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: FD, fontSize: "24px", fontWeight: 700, color: CREAM }}>{name}</div>
+          <div style={{ fontFamily: FD, fontSize: "24px", fontWeight: 700, color: CREAM, display: "flex", alignItems: "center", gap: "8px" }}>
+            {name}
+            <TrophyBadge count={winsFor(name)} size={16} />
+          </div>
           <div style={{ fontSize: "13px", color: M, marginBottom: "6px" }}>{team?.name} · {pi === 0 ? "Player 1" : "Player 2"}</div>
+          {winsFor(name) > 0 && (
+            <div style={{ fontSize: "11px", color: GOLD, fontWeight: 600, marginBottom: "6px" }}>
+              PVGC Champion — {winYearsFor(name).join(", ")}
+            </div>
+          )}
           {editingContact ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
               <input type="tel" value={cPhone} onChange={e => setCPhone(formatPhone(e.target.value))} placeholder="Phone"

@@ -67,6 +67,7 @@ import StatsScreen from "./components/StatsScreen";
 import PredictScreen from "./components/PredictScreen";
 import PulseScreen from "./components/PulseScreen";
 import ContactsScreen from "./components/ContactsScreen";
+import ChampionsScreen from "./components/ChampionsScreen";
 import ConfirmedScoresScreen from "./components/ConfirmedScoresScreen";
 import AuthGate from "./components/AuthGate";
 import {
@@ -743,8 +744,8 @@ const [seasonYear] = useState(SEASON_YEAR);
   // Board(masters)/Predict/Pulse hidden for 2026 (unused) — code kept; delete at season-end cleanup.
   const TABS=["schedule","live","scoring","entry","standings","weekly","poty","hcp","playoffs","players","rules","admin"];
   const PRIMARY_TABS=["schedule","live","scoring","standings","players","poty","hcp","rules","contacts","weekly"].concat(league.recapEnabled?["recap"]:[]);
-  const MORE_TABS=["entry","playoffs","stats","admin","verify","howto"].filter(t => t !== "verify" || isAdmin);
-  const TAB_LABEL={schedule:"Schedule",live:"Live",scoring:"Scoring",entry:"Entry",standings:"Standings",masters:"Board",weekly:"Weekly",poty:"POTY",hcp:"HCP",playoffs:"Playoffs",players:"Players",contacts:"Subs",stats:"Stats",rules:"Rules",admin:"Admin",verify:"Verify",predict:"Predict",pulse:"Pulse",howto:"How To",recap:"Recap"};
+  const MORE_TABS=["entry","playoffs","champions","stats","admin","verify","howto"].filter(t => t !== "verify" || isAdmin);
+  const TAB_LABEL={schedule:"Schedule",live:"Live",scoring:"Scoring",entry:"Entry",standings:"Standings",masters:"Board",weekly:"Weekly",poty:"POTY",hcp:"HCP",playoffs:"Playoffs",players:"Players",contacts:"Subs",stats:"Stats",rules:"Rules",admin:"Admin",verify:"Verify",predict:"Predict",pulse:"Pulse",howto:"How To",recap:"Recap",champions:"Champions"};
   const inMore = MORE_TABS.includes(screen);
 
   // Current match doc (for confirm/lock)
@@ -985,6 +986,10 @@ const [seasonYear] = useState(SEASON_YEAR);
 
       {screen==="contacts"&&(
         <ContactsScreen league={league} saveLeague={saveLeague} isAdmin={isAdmin} />
+      )}
+
+      {screen==="champions"&&(
+        <ChampionsScreen />
       )}
 
       {screen==="stats"&&(
