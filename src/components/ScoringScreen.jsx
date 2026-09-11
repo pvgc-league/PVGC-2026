@@ -389,9 +389,8 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
         background: "#16351f", color: "#fff", margin: "-14px -10px 12px",
         padding: "9px 12px",
       }}>
-        <div style={{ fontWeight: 700, fontSize: "12.5px" }}>Wk {selWeek} · {TEAMS[selTeam]?.name}</div>
-        <div style={{ flex: 1, fontSize: "11px", color: "#bcd6c4", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {opp ? `vs ${TEAMS[opp]?.name}` : ""}
+        <div style={{ flex: 1, fontWeight: 700, fontSize: "13px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          Wk {selWeek} · {TEAMS[selTeam]?.name}
         </div>
         <button onClick={() => setPlayMode(false)}
           style={{ background: "rgba(255,255,255,0.16)", border: "none", color: "#fff", borderRadius: "6px", padding: "5px 9px", fontSize: "11px", fontWeight: 700, cursor: "pointer", fontFamily: FB }}>
@@ -527,6 +526,29 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
           { label: "High", tIdx: 1, pi: o2hi, tid: t2id, color: GO, rivalTIdx: 0, rivalPi: o1hi },
         ];
 
+        // Play mode shows first names. 13 of 36 players share one (three Scotts),
+        // so fall back to a last initial only when two players ON THIS CARD clash —
+        // short almost always, unambiguous exactly when it matters.
+        const fullNameFor = (r) => (match.subs && match.subs[`${r.tid}-${r.pi}`])
+          ? match.subs[`${r.tid}-${r.pi}`].name
+          : (TEAMS[r.tid]?.[r.pi === 0 ? "p1" : "p2"] || "");
+        const firstOf = (n) => (n || "").trim().split(/\s+/)[0] || "";
+        const firstCounts = rows.reduce((acc, r) => {
+          const f = firstOf(fullNameFor(r));
+          acc[f] = (acc[f] || 0) + 1;
+          return acc;
+        }, {});
+        const shortName = (r) => {
+          const full = fullNameFor(r);
+          const first = firstOf(full);
+          if (firstCounts[first] < 2) return first;
+          const last = (full || "").trim().split(/\s+/).slice(1).join(" ");
+          return last ? `${first} ${last[0]}.` : first;
+        };
+
+        // Grouped by matchup for play mode: low pair, then high pair.
+        const orderedRows = playMode ? [rows[0], rows[2], rows[1], rows[3]] : rows;
+
         const getGross = (tIdx, pi, hi) => (tIdx === 0 ? match.t1scores : match.t2scores)[pi]?.[hi] || 0;
         // Score-aware rainout sub: only redirect to substitute hole if actual hole has no score
         const scoreEffH = (tIdx, pi, hi) => {
@@ -660,15 +682,17 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
             </div>
 
             {/* 4 player rows */}
-            {rows.map((r, ri) => {
+            {orderedRows.map((r, ri) => {
               const type = getType(r.tIdx, r.pi);
               const hcp = getHcp(r.tid, r.pi);
               const strokes = hcpStr(hcp, SI[hole]);
               const gross = getGross(r.tIdx, r.pi, scoreEffH(r.tIdx, r.pi, hole));
               const pts = getPtsFor(r.tIdx, r.pi, r.tid, hole);
               const subForRow = match.subs && match.subs[`${r.tid}-${r.pi}`];
-              const pname = subForRow ? subForRow.name : (TEAMS[r.tid]?.[r.pi === 0 ? "p1" : "p2"] || "");
-              const isSep = ri === 2; // separator between team 1 and team 2
+              const pname = playMode ? shortName(r) : (subForRow ? subForRow.name : (TEAMS[r.tid]?.[r.pi === 0 ? "p1" : "p2"] || ""));
+              // Team order separates after 2; matchup order needs a header before each pair.
+              const isSep = !playMode && ri === 2;
+              const matchupHead = playMode && (ri === 0 || ri === 2) ? (ri === 0 ? "Low vs Low" : "High vs High") : null;
 
               const cap = maxGross(PAR[scoreEffH(r.tIdx, r.pi, hole)], strokes);
               const adjGross = (delta) => {
@@ -684,6 +708,18 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
               return (
                 <div key={ri}>
                   {isSep && <div style={{ height: "1px", background: "rgba(26,61,36,0.08)", margin: "0 0" }} />}
+                  {matchupHead && (
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: "8px", padding: "4px 14px",
+                      background: ri === 0 ? G + "1a" : GOLD + "1f",
+                    }}>
+                      <span style={{
+                        fontSize: "9px", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase",
+                        color: ri === 0 ? G : GOLD,
+                      }}>{matchupHead}</span>
+                      <i style={{ flex: 1, height: "1px", background: (ri === 0 ? G : GOLD) + "38" }} />
+                    </div>
+                  )}
                   <div style={{
                     padding: "10px 14px", display: "flex", alignItems: "center", gap: "8px",
                     background: ri % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent",
@@ -847,6 +883,38 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
               </div>
             );
           })()}
+
+          {/* Head-to-head: low plays low, high plays high — two match points each.
+              Kept under the team strip rather than between rows so the card stays clean. */}
+          {playMode && (
+            <div style={{ background: CARD2, border: `1px solid ${GOLD}22`, borderRadius: "12px", marginBottom: "13px" }}>
+              {[{ tag: "Low", mine: rows[0], theirs: rows[2] }, { tag: "High", mine: rows[1], theirs: rows[3] }].map((mu, i) => {
+                const a = getRunTotal(mu.mine.tIdx, mu.mine.pi, mu.mine.tid);
+                const b = getRunTotal(mu.theirs.tIdx, mu.theirs.pi, mu.theirs.tid);
+                // green ahead, red behind, neutral when level
+                const col = (mine, other) => ({ fontSize: "14px", fontWeight: 800, width: "22px", textAlign: "center", color: mine > other ? G : mine < other ? R : CREAM });
+                return (
+                  <div key={mu.tag} style={{
+                    display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px",
+                    borderTop: i === 0 ? "none" : `1px solid ${GOLD}1f`,
+                  }}>
+                    <span style={{ width: "34px", fontSize: "8.5px", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: M }}>
+                      {mu.tag}
+                    </span>
+                    <span style={{ flex: 1, textAlign: "right", fontSize: "12.5px", fontWeight: 600, color: CREAM, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {shortName(mu.mine)}
+                    </span>
+                    <span style={col(a, b)}>{a}</span>
+                    <span style={{ fontSize: "9px", fontWeight: 600, color: M }}>vs</span>
+                    <span style={col(b, a)}>{b}</span>
+                    <span style={{ flex: 1, fontSize: "12.5px", fontWeight: 600, color: CREAM, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {shortName(mu.theirs)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Gross / Net / Stab summary strip */}
           {!playMode && (
