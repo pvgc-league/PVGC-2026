@@ -2,15 +2,20 @@ import * as L2026 from "./league_2026";
 
 const STORAGE_KEY = "pvgc_season_year";
 
-// Season registry — add a season here and it becomes selectable. Nothing else in
-// this file needs to change. 2024 and 2025 were removed: their spreadsheets
-// carried manual adjustments the app was never able to reproduce faithfully.
+// Season registry — add a season here to make it selectable. 2024 and 2025 were
+// removed: their spreadsheets carried manual adjustments the app was never able
+// to reproduce faithfully.
 const SEASONS = {
   2026: L2026,
 };
 
+// The season everyone lands on by default. Registering a season does NOT activate
+// it — a new year gets built up over the preseason (roster, then handicaps, then
+// the schedule in March) and is only worth defaulting to once its schedule is in.
+// Bump this by hand when the new season is ready to open.
+const CURRENT_SEASON = 2026;
+
 const AVAILABLE_SEASONS = Object.keys(SEASONS).map(Number).sort((a, b) => a - b);
-const CURRENT_SEASON = AVAILABLE_SEASONS[AVAILABLE_SEASONS.length - 1];
 
 function readSeasonYear() {
   if (typeof window === "undefined") return CURRENT_SEASON;

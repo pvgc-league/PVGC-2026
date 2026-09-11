@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "capture-hcp": "esbuild scripts/capture-handicaps.mjs --bundle --platform=node --format=esm --packages=external --outfile=scripts/.capture-hcp.build.mjs && node scripts/.capture-hcp.build.mjs"
+    "capture-hcp": "esbuild scripts/capture-handicaps.mjs --bundle --platform=node --format=esm --packages=external --outfile=scripts/.capture-hcp.build.mjs && node scripts/.capture-hcp.build.mjs",
+    "new-season": "esbuild scripts/new-season.mjs --bundle --platform=node --format=esm --packages=external --outfile=scripts/.new-season.build.mjs && node scripts/.new-season.build.mjs"
   },
   "dependencies": {
     "firebase": "^12.0.0",
