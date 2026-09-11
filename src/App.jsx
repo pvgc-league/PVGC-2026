@@ -82,6 +82,7 @@ import {
   initLeague,
   initMatch,
   getEffectiveHcp,
+  getEffectiveHcpRaw,
   isMatchComplete,
   rankStandings,
 } from "./lib/leagueLogic";
@@ -661,9 +662,16 @@ const [seasonYear] = useState(SEASON_YEAR);
       [tlow]: [0,1].map(pi => getEffectiveHcp(tlow, pi, selWeek, league.results, league.handicaps, league.hcpOverrides||{}, league.cancelledWeeks)),
       [thigh]: [0,1].map(pi => getEffectiveHcp(thigh, pi, selWeek, league.results, league.handicaps, league.hcpOverrides||{}, league.cancelledWeeks)),
     };
+    // Unrounded alongside the rounded snapshot, so low/high pairings compare
+    // precisely instead of letting 6.4 and 6.6 both round to 6 and fall back to
+    // roster order. Only new records carry it; older ones keep the rounded path.
+    const hcpSnapshotRaw = {
+      [tlow]: [0,1].map(pi => getEffectiveHcpRaw(tlow, pi, selWeek, league.results, league.handicaps, league.hcpOverrides||{}, league.cancelledWeeks)),
+      [thigh]: [0,1].map(pi => getEffectiveHcpRaw(thigh, pi, selWeek, league.results, league.handicaps, league.hcpOverrides||{}, league.cancelledWeeks)),
+    };
     const toSave = selTeam===tlow
-      ? {...m, hcpSnapshot}
-      : {...m, hcpSnapshot, t1scores:m.t2scores, t1types:m.t2types, t2scores:m.t1scores, t2types:m.t1types};
+      ? {...m, hcpSnapshot, hcpSnapshotRaw}
+      : {...m, hcpSnapshot, hcpSnapshotRaw, t1scores:m.t2scores, t1types:m.t2types, t2scores:m.t1scores, t2types:m.t1types};
     await saveMatchDoc(toSave, selWeek, tlow, thigh);
     setScanMsg("✓ Saved");
     setTimeout(()=>setScanMsg(""),2000);

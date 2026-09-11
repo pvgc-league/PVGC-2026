@@ -437,8 +437,9 @@ function calcLeagueStats(results, handicaps, cancelledWeeksIn=null, maxWeek=REGU
       // Some teams list their higher-hcp player as p0 — this corrects the matchup.
       const snap = rec.hcpSnapshot;
       const loHiCtx = { loHiOverrides: loHiOverrides || {}, results, handicaps, hcpOverrides: {}, cancelledWeeks: cancelledWeeksIn };
-      const { loPi: piA_lo, hiPi: piA_hi } = getLoHiOrder(tlow, w, loHiCtx, snap);
-      const { loPi: piB_lo, hiPi: piB_hi } = getLoHiOrder(thigh, w, loHiCtx, snap);
+      const snapRaw = rec.hcpSnapshotRaw;
+      const { loPi: piA_lo, hiPi: piA_hi } = getLoHiOrder(tlow, w, loHiCtx, snap, snapRaw);
+      const { loPi: piB_lo, hiPi: piB_hi } = getLoHiOrder(thigh, w, loHiCtx, snap, snapRaw);
       const pairings = [{piA:piA_lo,piB:piB_lo},{piA:piA_hi,piB:piB_hi}];
       let winsA=0, winsB=0;
       for (const {piA,piB} of pairings) {
@@ -699,20 +700,36 @@ function getEffectiveHcp(tid, pi, week, results, handicaps, hcpOverrides, cancel
 // Returns { loPi, hiPi } — the pi index of the low and high HCP player for tid in week.
 // Priority: loHiOverrides → hcpSnapshot → getEffectiveHcpRaw
 // loHiCtx must have { loHiOverrides, results, handicaps, hcpOverrides, cancelledWeeks? }
-function getLoHiOrder(tid, week, loHiCtx, hcpSnapshot = null) {
+// Lower handicap is the low player; a genuine tie falls to p0 (roster order).
+const pickLo = (a, b) => (b < a ? 1 : 0);
+
+function getLoHiOrder(tid, week, loHiCtx, hcpSnapshot = null, hcpSnapshotRaw = null) {
   const ov = (loHiCtx.loHiOverrides || {})[`${tid}-${week}`];
   if (ov !== undefined) return { loPi: ov, hiPi: 1 - ov };
-  const snapEntry = hcpSnapshot?.[tid] ?? hcpSnapshot?.[String(tid)];
-  if (snapEntry) {
-    const s0r = Math.round(snapEntry[0] || 0), s1r = Math.round(snapEntry[1] || 0);
-    const loPi = s0r < s1r ? 0 : s1r < s0r ? 1 : 0; // tied → p0 is lo
+
+  // Precise snapshot, stamped on matches saved from 2027 on. Compared unrounded so
+  // a 6.4 and a 6.6 resolve correctly instead of both rounding to 6 and falling to
+  // roster order.
+  const rawEntry = hcpSnapshotRaw?.[tid] ?? hcpSnapshotRaw?.[String(tid)];
+  if (rawEntry) {
+    const loPi = pickLo(rawEntry[0] || 0, rawEntry[1] || 0);
     return { loPi, hiPi: 1 - loPi };
   }
+
+  // Legacy snapshot: rounded integers, which is all the spreadsheet-era records
+  // carry. Kept as-is so archived seasons keep the pairings they were played and
+  // scored with — changing this would rewrite settled standings.
+  const snapEntry = hcpSnapshot?.[tid] ?? hcpSnapshot?.[String(tid)];
+  if (snapEntry) {
+    const loPi = pickLo(Math.round(snapEntry[0] || 0), Math.round(snapEntry[1] || 0));
+    return { loPi, hiPi: 1 - loPi };
+  }
+
+  // Computed live (week not yet scored) — compare raw, no rounding.
   const cw = loHiCtx.cancelledWeeks || null;
   const r0 = getEffectiveHcpRaw(tid, 0, week, loHiCtx.results, loHiCtx.handicaps, loHiCtx.hcpOverrides || {}, cw);
   const r1 = getEffectiveHcpRaw(tid, 1, week, loHiCtx.results, loHiCtx.handicaps, loHiCtx.hcpOverrides || {}, cw);
-  const r0r = Math.round(r0), r1r = Math.round(r1);
-  const loPi = r0r < r1r ? 0 : r1r < r0r ? 1 : 0; // tied rounded → p0 is lo
+  const loPi = pickLo(r0, r1);
   return { loPi, hiPi: 1 - loPi };
 }
 
@@ -753,8 +770,8 @@ function calcWeeklyTeamPts(results, handicaps, cancelledWeeksIn=null, maxWeek=RE
 
       let mA = 0, mB = 0;
       const loHiCtx2 = { loHiOverrides: loHiOverrides || {}, results, handicaps, hcpOverrides: {}, cancelledWeeks: cancelledWeeksIn };
-      const { loPi: plo, hiPi: phi } = getLoHiOrder(tlow, w, loHiCtx2, rec.hcpSnapshot);
-      const { loPi: qlo, hiPi: qhi } = getLoHiOrder(thigh, w, loHiCtx2, rec.hcpSnapshot);
+      const { loPi: plo, hiPi: phi } = getLoHiOrder(tlow, w, loHiCtx2, rec.hcpSnapshot, rec.hcpSnapshotRaw);
+      const { loPi: qlo, hiPi: qhi } = getLoHiOrder(thigh, w, loHiCtx2, rec.hcpSnapshot, rec.hcpSnapshotRaw);
       for (const {piA, piB} of [{piA:plo,piB:qlo},{piA:phi,piB:qhi}]) {
         const pA = computePlayerTotal(rec, 0, piA, tlow, handicaps);
         const pB = computePlayerTotal(rec, 1, piB, thigh, handicaps);
