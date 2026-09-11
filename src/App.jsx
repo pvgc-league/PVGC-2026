@@ -4,6 +4,7 @@ import {
   DEFAULT_HCP,
   AVAILABLE_SEASONS,
   SEASON_YEAR,
+  isDraftSeason,
   PLAYOFF_START_WEEK,
   SCHEDULE,
   setSeasonYear,
@@ -812,6 +813,16 @@ const [seasonYear] = useState(SEASON_YEAR);
       )}
       <Banner banner={league?.banner} />
 
+      {isDraftSeason(seasonYear) && (
+        <div style={{
+          position:"sticky", top:0, zIndex:40, background:"#8a2f0a", color:"#fff",
+          padding:"7px 14px", fontSize:"12.5px", fontWeight:700, textAlign:"center",
+          letterSpacing:"0.04em", borderBottom:"2px solid #5e1f06",
+        }}>
+          ⚠ {seasonYear} DRAFT — schedule not final, tee times not set. Admin preview only.
+        </div>
+      )}
+
       {screen!=="live" && (
       <div style={{padding:"12px 18px 0 18px",
         display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"8px",
@@ -835,7 +846,7 @@ const [seasonYear] = useState(SEASON_YEAR);
                 borderRadius:"7px", color:"#0f2a14", fontFamily:FB, fontSize:"13px",
                 padding:"4px 8px", cursor:"pointer", outline:"none"
               }}>
-              {AVAILABLE_SEASONS.map((y)=><option key={y} value={y}>{y}</option>)}
+              {AVAILABLE_SEASONS.map((y)=><option key={y} value={y}>{y}{isDraftSeason(y)?" (draft)":""}</option>)}
             </select>
           </div>
         </div>
