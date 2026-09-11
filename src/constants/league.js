@@ -1,4 +1,5 @@
 import * as L2026 from "./league_2026";
+import * as L2027 from "./league_2027";
 
 const STORAGE_KEY = "pvgc_season_year";
 
@@ -7,12 +8,15 @@ const STORAGE_KEY = "pvgc_season_year";
 // to reproduce faithfully.
 const SEASONS = {
   2026: L2026,
+  2027: L2027,
 };
 
 // The season everyone lands on by default. Registering a season does NOT activate
 // it — a new year gets built up over the preseason (roster, then handicaps, then
 // the schedule in March) and is only worth defaulting to once its schedule is in.
 // Bump this by hand when the new season is ready to open.
+// Still 2026: the season that just finished is what members should land on.
+// Bump to 2027 on opening day (2027-04-14).
 const CURRENT_SEASON = 2026;
 
 const AVAILABLE_SEASONS = Object.keys(SEASONS).map(Number).sort((a, b) => a - b);
