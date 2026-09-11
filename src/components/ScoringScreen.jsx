@@ -53,7 +53,9 @@ function playHorn() {
   } catch(e) {}
 }
 
-function LostBallTimer() {
+// liftPx raises the timer clear of play mode's fixed dock; hideButton tucks the
+// floating button away while the bonus drawer is open so it can't sit on top of it.
+function LostBallTimer({ liftPx = 0, hideButton = false }) {
   const [running, setRunning] = useState(false);
   const [secsLeft, setSecsLeft] = useState(LOST_BALL_SECS);
   const [expired, setExpired] = useState(false);
@@ -99,11 +101,11 @@ function LostBallTimer() {
   return (
     <>
       {/* Floating button — bottom right */}
-      {!running && !expired && (
+      {!running && !expired && !hideButton && (
         <button onClick={start}
           title="Start 3-min lost ball timer"
           style={{
-            position: "fixed", bottom: "20px", right: "18px", zIndex: 100,
+            position: "fixed", bottom: `${20 + liftPx}px`, right: "18px", zIndex: 47,
             width: "52px", height: "52px", borderRadius: "50%",
             background: GOLD + "22", border: `2px solid ${GOLD}66`,
             color: GOLD, fontSize: "22px", cursor: "pointer",
@@ -117,7 +119,7 @@ function LostBallTimer() {
       {/* Running / expired banner */}
       {(running || expired) && (
         <div style={{
-          position: "fixed", bottom: "0", left: "0", right: "0", zIndex: 100,
+          position: "fixed", bottom: `${liftPx}px`, left: "0", right: "0", zIndex: 100,
           background: expired ? R : urgent ? R + "ee" : "rgba(20,45,20,0.96)",
           borderTop: `3px solid ${expired ? R : urgent ? R : GOLD}`,
           padding: "14px 20px",
@@ -382,6 +384,7 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
   // "As it stands" bonus board — only computed in play mode, since that's the one
   // place it's wanted and it walks every match in the week.
   const [boardOpen, setBoardOpen] = useState(false);
+  const DOCK_H = 58; // keep the drawer and the lost-ball timer clear of the dock
   const liveBoard = useMemo(
     () => (playMode ? calcLiveBoard(selWeek, league.results, league.handicaps, SCHEDULE) : null),
     [playMode, selWeek, league.results, league.handicaps]
@@ -1312,7 +1315,7 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
 
     </>)}
 
-    <LostBallTimer />
+    <LostBallTimer liftPx={playMode ? DOCK_H : 0} hideButton={playMode && boardOpen} />
 
     {/* ── Play mode: bonus drawer + dock ── */}
     {playMode && myPos && (<>
@@ -1322,7 +1325,7 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
       )}
       {boardOpen && (
         <div style={{
-          position: "fixed", left: 0, right: 0, bottom: "58px", zIndex: 49,
+          position: "fixed", left: 0, right: 0, bottom: `${DOCK_H}px`, zIndex: 49,
           maxHeight: "62vh", overflowY: "auto", background: CARD2,
           borderTop: `1px solid ${GOLD}44`, borderRadius: "14px 14px 0 0",
           boxShadow: "0 -6px 20px rgba(0,0,0,0.18)",
