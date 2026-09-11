@@ -345,29 +345,81 @@ function calcWeekBonus(week, results, handicaps, schedule=SCHEDULE) {
     totals.push({tid:tlow,  total:computeTeamTotal(rec,0,tlow,handicaps)});
     totals.push({tid:thigh, total:computeTeamTotal(rec,1,thigh,handicaps)});
   }
-  // Sort descending by total
-  totals.sort((a,b)=>b.total-a.total);
+  return awardBonusBuckets(totals).bonus;
+}
+
+// Award by score groups (distinct totals): top 2 groups get 8, next 2 get 6, then
+// 4, then 2, then 0. Teams on the same total always get the same bonus.
+// Returns { bonus: {tid: pts}, sorted: [...] } — `sorted` is descending by total.
+function awardBonusBuckets(totals) {
+  const sorted = [...totals].sort((a, b) => b.total - a.total);
   const bonus = {};
   const bucketPts = [8, 6, 4, 2];
-  let bucketIdx = 0;
-  let groupsInBucket = 0;
-  let i = 0;
-
-  // Award by score groups (distinct totals): top 2 groups get 8, next 2 groups get 6, etc.
-  // All teams within the same score group always receive the same bonus (ties handled).
-  while (i < totals.length) {
+  let bucketIdx = 0, groupsInBucket = 0, i = 0;
+  while (i < sorted.length) {
     let j = i + 1;
-    while (j < totals.length && totals[j].total === totals[i].total) j++;
+    while (j < sorted.length && sorted[j].total === sorted[i].total) j++;
     const pts = bucketIdx < bucketPts.length ? bucketPts[bucketIdx] : 0;
-    for (let k = i; k < j; k++) bonus[totals[k].tid] = pts;
-    groupsInBucket++;
-    if (groupsInBucket === 2) {
-      groupsInBucket = 0;
-      bucketIdx++;
-    }
+    for (let k = i; k < j; k++) bonus[sorted[k].tid] = pts;
+    if (++groupsInBucket === 2) { groupsInBucket = 0; bucketIdx++; }
     i = j;
   }
-  return bonus;
+  return { bonus, sorted };
+}
+
+// Holes a team has completed — the furthest hole either player has a score on.
+function teamThruHoles(rec, tIdx) {
+  if (!rec) return 0;
+  const raw = tIdx === 0 ? rec.t1scores : rec.t2scores;
+  const s = Array.isArray(raw) ? raw : (raw ? [raw.p0 || [], raw.p1 || []] : [[], []]);
+  let thru = 0;
+  for (let h = 0; h < 9; h++) if (((s[0] || [])[h] || 0) > 0 || ((s[1] || [])[h] || 0) > 0) thru = h + 1;
+  return thru;
+}
+
+// "As it stands" board for a week in progress. Unlike calcWeekBonus this does NOT
+// wait for every match to be complete — it ranks whatever has been entered so a
+// team can see where they sit for bonus while still on the course.
+//
+// This is a SNAPSHOT, not a forecast: a team thru 4 is ranked against a team thru
+// 9, so `thru` is returned per row and must be shown alongside it. Never use this
+// for awarded points — calcWeekBonus stays the authority for those.
+function calcLiveBoard(week, results, handicaps, schedule = SCHEDULE) {
+  const w = schedule[week];
+  if (!w?.pairs?.length) return null;
+  const totals = [];
+  let allComplete = true;
+  for (const [ta, tb] of w.pairs) {
+    if (!Array.isArray([ta, tb])) continue;
+    const [tlow, thigh] = ta < tb ? [ta, tb] : [tb, ta];
+    const rec = results[week]?.[matchKey(week, tlow, thigh)];
+    if (!isMatchComplete(rec)) allComplete = false;
+    totals.push({ tid: tlow,  total: rec ? computeTeamTotal(rec, 0, tlow, handicaps) : 0,  thru: teamThruHoles(rec, 0) });
+    totals.push({ tid: thigh, total: rec ? computeTeamTotal(rec, 1, thigh, handicaps) : 0, thru: teamThruHoles(rec, 1) });
+  }
+  if (!totals.length) return null;
+  const { bonus, sorted } = awardBonusBuckets(totals);
+  return { allComplete, bonus, rows: sorted.map((t, i) => ({ ...t, rank: i + 1, bonus: bonus[t.tid] || 0 })) };
+}
+
+// One-line summary for the play-mode dock: where a team sits and what it would
+// take to reach the next bonus tier. Tying the lowest total in a tier is enough,
+// since teams on the same total share a bucket.
+function describeBonusPosition(board, tid) {
+  if (!board) return null;
+  const me = board.rows.find(r => r.tid === tid);
+  if (!me) return null;
+  const better = board.rows.filter(r => r.bonus > me.bonus);
+  const target = better.length ? better[better.length - 1] : null;
+  return {
+    rank: me.rank,
+    of: board.rows.length,
+    total: me.total,
+    thru: me.thru,
+    bonus: me.bonus,
+    nextBonus: target ? target.bonus : null,
+    gap: target ? Math.max(0, target.total - me.total) : 0,
+  };
 }
 
 // True only once every match in the week has been confirmed by both teams —
@@ -1065,6 +1117,9 @@ export {
   getEffectiveHcp,
   getEffectiveHcpRaw,
   getLoHiOrder,
+  calcLiveBoard,
+  describeBonusPosition,
+  teamThruHoles,
   calcSuggestedHcps,
   initMatch,
   isWeekCancelled,
