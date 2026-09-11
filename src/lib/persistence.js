@@ -106,10 +106,21 @@ function applySnapshotToLeague(prevLeague, payload, defaultHcp) {
     banner: p.banner !== undefined ? p.banner : (prevLeague.banner || {}),
     recaps: p.recaps || {},
     recapEnabled: !!p.recapEnabled,
+    locked: !!p.locked,
   };
 }
 
+// Season lock policy. A locked (archived) season rejects every write except the
+// one that explicitly unlocks it — otherwise the season could never be reopened.
+// Fails closed on purpose: a `next` that dropped the flag entirely counts as a
+// normal edit and stays blocked, rather than being mistaken for an unlock.
+function isLeagueWriteBlocked(league, next) {
+  if (!league?.locked) return false;
+  return next?.locked !== false;
+}
+
 export {
+  isLeagueWriteBlocked,
   toSet,
   normalizeMatch,
   decodeResults,

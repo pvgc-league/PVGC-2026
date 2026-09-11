@@ -88,7 +88,7 @@ import {
   isMatchComplete,
   rankStandings,
 } from "./lib/leagueLogic";
-import { applySnapshotToLeague, applyWeekScoreDoc, removeWeekScoreDoc, normalizeMatch, toSet } from "./lib/persistence";
+import { applySnapshotToLeague, applyWeekScoreDoc, removeWeekScoreDoc, normalizeMatch, toSet, isLeagueWriteBlocked } from "./lib/persistence";
 
 // True if saving `next` would erase real scores a player had in `existing`
 // (a scored player turned into a sub/phantom, or their holes cleared).
@@ -197,6 +197,7 @@ const [seasonYear] = useState(SEASON_YEAR);
         adminEmails: p.adminEmails || prev.adminEmails || [],
         recaps: p.recaps || prev.recaps || {},
         recapEnabled: p.recapEnabled !== undefined ? !!p.recapEnabled : prev.recapEnabled,
+        locked: p.locked !== undefined ? !!p.locked : prev.locked,
       }));
       if (p.rules) setRules(p.rules);
       if (p.adminPin) setAdminPin(p.adminPin);
@@ -223,7 +224,25 @@ const [seasonYear] = useState(SEASON_YEAR);
     return ()=>unsub();
   },[]);
 
+  // ── Season lock ──────────────────────────────────────────────
+  // An archived season is read-only. Every score-mutating path goes through this
+  // one guard rather than being checked per-screen: the older readOnlyWeeks flag
+  // is only honored in EntryTab, so other write paths silently ignore it.
+  function assertWritable(action = "edit") {
+    if (!league.locked) return true;
+    setFbStatus(`save-error:locked:Season ${seasonYear} is archived — cannot ${action}`);
+    console.warn(`[season locked] blocked: ${action}`);
+    return false;
+  }
+
   async function saveLeague(next){
+    // The lock toggle itself must always get through, or the season could never be
+    // unlocked. See isLeagueWriteBlocked for the exact rule (and its tests).
+    if (isLeagueWriteBlocked(league, next)) {
+      setFbStatus(`save-error:locked:Season ${seasonYear} is archived — cannot edit`);
+      console.warn("[season locked] blocked: saveLeague");
+      return;
+    }
     setLeague(next);
     lastSaveTime.current = Date.now();
     try{
@@ -243,6 +262,7 @@ const [seasonYear] = useState(SEASON_YEAR);
         banner: next.banner || {},
         recaps: next.recaps || {},
         recapEnabled: !!next.recapEnabled,
+        locked: !!next.locked,
       }, {merge:true});
       setFbStatus("loaded");
     }catch(e){
@@ -252,6 +272,7 @@ const [seasonYear] = useState(SEASON_YEAR);
   }
 
   async function saveMatchDoc(toSave, week, tlow, thigh){
+    if (!assertWritable("save scores")) return;
     const key = matchKey(week, tlow, thigh);
     const docId = `${week}_${key}`;
     // Safety net: back up before an edit that would erase a player's scores
@@ -330,6 +351,7 @@ const [seasonYear] = useState(SEASON_YEAR);
   }
 
   async function clearMatch(week, mk){
+    if (!assertWritable("clear a match")) return;
     const docId = `${week}_${mk}`;
     if (league.results[week]?.[mk]) {
       await createSnapshot(`Auto-backup — before clearing match, Week ${week}`, true);
@@ -443,6 +465,7 @@ const [seasonYear] = useState(SEASON_YEAR);
   }
 
   async function restoreSnapshot(id) {
+    if (!assertWritable("restore a snapshot")) return;
     try {
       const doc = await SNAPSHOTS_COL.doc(id).get();
       if (!doc.exists) return false;
@@ -508,6 +531,7 @@ const [seasonYear] = useState(SEASON_YEAR);
 
   // Restore a match's live scores from an immutable confirmed record.
   async function restoreConfirmedRecord(rec) {
+    if (!assertWritable("restore a score")) return;
     if (!rec) return false;
     const unflat = (s) => Array.isArray(s) ? s : (s ? [s.p0 || [], s.p1 || []] : [[], []]);
     const toSave = {
@@ -522,6 +546,7 @@ const [seasonYear] = useState(SEASON_YEAR);
   }
 
   async function confirmMatch(week, mk, tid){
+    if (!assertWritable("confirm a match")) return;
     const existing = league.results[week]?.[mk] || {};
     const confirmations = {
       ...(existing.confirmations || {}),
@@ -572,6 +597,7 @@ const [seasonYear] = useState(SEASON_YEAR);
   }
 
   async function unlockMatch(week, mk){
+    if (!assertWritable("unlock a match")) return;
     const docId = `${week}_${mk}`;
     lastMatchSaveTime.current = Date.now();
     try {

@@ -876,6 +876,38 @@ export default function AdminScreen({ league, knockdownPairs, qfPairs, sfPairs, 
         </button>
       </div>
 
+      {/* ── Season lock (archive) ── */}
+      <div style={{
+        background: league.locked ? "#fdf3f2" : "#fff",
+        border: `1px solid ${league.locked ? "rgba(185,28,28,.3)" : "rgba(26,61,36,.14)"}`,
+        borderRadius: "12px", padding: "12px 14px", marginBottom: "16px",
+        display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px",
+      }}>
+        <div>
+          <div style={{ fontWeight: 700, color: "#17281e", fontSize: "14px" }}>
+            {league.locked ? "🔒" : "🔓"} Season {SEASON_YEAR} — {league.locked ? "archived" : "open"}
+          </div>
+          <div style={{ fontSize: "12px", color: "#6a7c6f", marginTop: "2px" }}>
+            {league.locked
+              ? "Read-only. Scores, confirmations and settings can't be changed."
+              : "Lock when the season is finished to make it permanently read-only."}
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            const msg = league.locked
+              ? `Unlock season ${SEASON_YEAR}? Scores will become editable again.`
+              : `Archive season ${SEASON_YEAR}?\n\nThis makes the whole season read-only — no score edits, confirmations, clears or restores. You can unlock it here later.`;
+            if (window.confirm(msg)) saveLeague({ ...league, locked: !league.locked });
+          }}
+          style={{
+            flexShrink: 0, padding: "8px 14px", borderRadius: "8px", border: "none", cursor: "pointer",
+            background: league.locked ? "#b91c1c" : "#1c854a", color: "#fff", fontSize: "13px", fontWeight: 700,
+          }}>
+          {league.locked ? "Unlock" : "Archive"}
+        </button>
+      </div>
+
       {/* ── Admin Access ──────────────────────────────────────────── */}
       <AccordionSection
         id="access" open={isOpen("access")} onToggle={toggleSection}
