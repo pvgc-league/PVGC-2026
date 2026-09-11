@@ -155,6 +155,26 @@ sheet Apr 13. So roughly four weeks of lead time, finalised about a week out.
 Order matters: **roster → handicaps → schedule.** You can't pair teams that don't
 exist yet, and re-pairing teams invalidates a captured handicap set.
 
+#### Two dates in the generated 2027 schedule are guesses — confirm them
+
+The schedule structure was verified against 2026 (single round-robin, 153 pairings,
+Wednesdays, 4 unpaired playoff weeks). These two were inferred and could be wrong:
+
+| | 2026 (fact) | 2027 (generated) | The other candidate |
+|---|---|---|---|
+| Opening day | Apr 15 — **3rd** Wednesday | Apr 14 — **2nd** Wednesday | Apr 21 (same ordinal as 2026) |
+| July bye | Wed Jul 1 | Jul 7 — *first Wednesday of July* | Jun 30 — *Wednesday of the Jul-4th week* |
+
+The bye rule was inferred from a single data point: Jul 1 2026 satisfies **both**
+candidate rules, and they only diverge in 2027 because Jul 4 falls on a Sunday.
+
+Regenerate in seconds once confirmed:
+`npm run build-schedule -- 2027 --start 2027-04-21` (and edit the bye rule in
+`scripts/build-schedule.mjs` if it's the Jul-4th-week rule).
+
+Also unknown to the generator: any league conventions beyond tee times — rivalry
+weeks, opening-day traditions, keeping certain teams apart early.
+
 #### The tee-time accommodation is being silently dropped
 
 A few teams need **later start times for work schedules**. The commissioner already
