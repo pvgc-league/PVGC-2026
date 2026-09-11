@@ -133,6 +133,10 @@ const [seasonYear] = useState(SEASON_YEAR);
   const [isAdmin, setIsAdmin] = useState(() => localStorage.getItem("pvgc_admin") === "1");
   const [adminPin, setAdminPin] = useState(""); // loaded from Firebase
   const [moreOpen, setMoreOpen] = useState(false);
+  // Play mode: the stripped-down Scoring layout used on the course. Opt-in per
+  // visit, and it hides the sticky header the same way Live does.
+  const [playMode, setPlayMode] = useState(false);
+  useEffect(() => { if (screen !== "scoring") setPlayMode(false); }, [screen]);
 
   function changeSeason(year) {
     if (!setSeasonYear(year)) return;
@@ -823,7 +827,7 @@ const [seasonYear] = useState(SEASON_YEAR);
         </div>
       )}
 
-      {screen!=="live" && (
+      {screen!=="live" && !(screen==="scoring" && playMode) && (
       <div style={{padding:"12px 18px 0 18px",
         display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"8px",
         background:"#ffffff",position:"sticky",top:0,zIndex:20,
@@ -906,6 +910,8 @@ const [seasonYear] = useState(SEASON_YEAR);
       {screen==="scoring"&&(()=>{
         return <>
           <ScoringScreen
+            playMode={playMode}
+            setPlayMode={setPlayMode}
             selWeek={selWeek}
             setWeek={setWeek}
             selTeam={selTeam}

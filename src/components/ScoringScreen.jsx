@@ -1,9 +1,9 @@
 import { PAR, SI, RAINOUT_SUB, TEAMS, SCHEDULE } from "../constants/league";
-import { stabPts, hcpStr, maxGross, getEffectiveHcp, getEffectiveHcpRaw, computeTeamTotal, matchKey, getLoHiOrder } from "../lib/leagueLogic";
+import { stabPts, hcpStr, maxGross, getEffectiveHcp, getEffectiveHcpRaw, computeTeamTotal, matchKey, getLoHiOrder, calcLiveBoard, describeBonusPosition } from "../lib/leagueLogic";
 import { BG, CARD, CARD2, CREAM, FB, FD, G, GO, GOLD, M, R } from "../constants/theme";
 import { fmtDate } from "../lib/format";
 import { Tag, PtsBadge } from "./ui";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 
 const LOST_BALL_SECS = 180;
 
@@ -169,6 +169,8 @@ function LostBallTimer() {
 }
 
 function ScoringScreen({
+  playMode,
+  setPlayMode,
   selWeek,
   setWeek,
   selTeam,
@@ -377,9 +379,36 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
     setTimeout(() => w.print(), 300);
   }
 
-  return (<div style={{ maxWidth: "820px", margin: "0 auto", padding: "14px 10px" }}>
+  // "As it stands" bonus board — only computed in play mode, since that's the one
+  // place it's wanted and it walks every match in the week.
+  const [boardOpen, setBoardOpen] = useState(false);
+  const liveBoard = useMemo(
+    () => (playMode ? calcLiveBoard(selWeek, league.results, league.handicaps, SCHEDULE) : null),
+    [playMode, selWeek, league.results, league.handicaps]
+  );
+  const myPos = liveBoard ? describeBonusPosition(liveBoard, selTeam) : null;
+
+  return (<div style={{ maxWidth: "820px", margin: "0 auto", padding: playMode ? "14px 10px 74px" : "14px 10px" }}>
+
+    {playMode && (
+      <div style={{
+        display: "flex", alignItems: "center", gap: "8px",
+        background: "#16351f", color: "#fff", margin: "-14px -10px 12px",
+        padding: "9px 12px",
+      }}>
+        <div style={{ fontWeight: 700, fontSize: "12.5px" }}>Wk {selWeek} · {TEAMS[selTeam]?.name}</div>
+        <div style={{ flex: 1, fontSize: "11px", color: "#bcd6c4", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {opp ? `vs ${TEAMS[opp]?.name}` : ""}
+        </div>
+        <button onClick={() => setPlayMode(false)}
+          style={{ background: "rgba(255,255,255,0.16)", border: "none", color: "#fff", borderRadius: "6px", padding: "5px 9px", fontSize: "11px", fontWeight: 700, cursor: "pointer", fontFamily: FB }}>
+          Exit
+        </button>
+      </div>
+    )}
 
     {/* Week / Team selectors */}
+    {!playMode && (
     <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap", alignItems: "center" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
         <span style={{ fontSize: "12px", color: M, letterSpacing: "0.08em", textTransform: "uppercase" }}>Week</span>
@@ -428,7 +457,19 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
             </div>
           : <div style={{ marginLeft: "auto", fontSize: "13px", color: R }}>No match this week</div>
       }
+      {opp && !isCancelled && (
+        <button onClick={() => setPlayMode(true)}
+          style={{
+            marginLeft: "auto", background: G, border: "none", color: "#fff",
+            borderRadius: "9px", padding: "8px 13px", fontSize: "13px", fontWeight: 700,
+            cursor: "pointer", fontFamily: FB, display: "flex", alignItems: "center", gap: "6px",
+          }}
+          title="Strip the page down for entering scores on the course">
+          ⛳ Play mode
+        </button>
+      )}
     </div>
+    )}
 
     {!canEdit && currentUserTid && opp && (
       <div style={{ background: "rgba(180,120,0,0.1)", border: `1px solid ${GOLD}44`, borderRadius: "10px", padding: "10px 14px", marginBottom: "12px", fontSize: "13px", color: GOLD }}>
@@ -444,6 +485,7 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
     ) : (<>
 
       {/* Rainout toggle */}
+      {!playMode && (
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "7px",
         background: CARD, border: `1px solid ${match.rainout ? GO + "44" : "rgba(255,255,255,0.95)"}`,
@@ -474,6 +516,7 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
           </button>
         </div>
       </div>
+      )}
 
       {/* ── 4-ROW SCORECARD ── */}
       {(() => {
@@ -665,7 +708,7 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
                           fontSize: "12px", fontWeight: 600, color: CREAM,
                           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"
                         }}>{pname}</span>
-                        <Tag color={r.label === "Low" ? "#4db8f0" : "#b97df5"}>{r.label} HCP</Tag>
+                        {!playMode && <Tag color={r.label === "Low" ? "#4db8f0" : "#b97df5"}>{r.label} HCP</Tag>}
                         {type === "sub" && <Tag color={GO}>Sub</Tag>}
                         {type === "phantom" && <Tag color={R}>Phantom</Tag>}
                       </div>
@@ -678,8 +721,8 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
                       </div>
                     </div>
 
-                    {/* Type selector */}
-                    <select value={type} onChange={e => !isDisabled && setTypeVal(r.tIdx, r.pi, e.target.value)}
+                    {/* Type selector — hidden in play mode; set it in Entry instead */}
+                    {!playMode && <select value={type} onChange={e => !isDisabled && setTypeVal(r.tIdx, r.pi, e.target.value)}
                       disabled={isDisabled}
                       style={{
                         background: "rgba(26,61,36,0.04)", border: `1px solid ${GOLD}33`,
@@ -690,7 +733,7 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
                       <option value="normal">Regular</option>
                       <option value="sub">Sub</option>
                       <option value="phantom">Phantom</option>
-                    </select>
+                    </select>}
 
                     {/* +/- Score entry + net + stab */}
                     {(type === "sub" || type === "phantom") ? (
@@ -1192,7 +1235,7 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
       )}
 
       {/* All-team bonus league table — shown only once all scores are in */}
-      {weekBonus && (
+      {!playMode && weekBonus && (
         <div style={{ background: GOLD + "08", border: `1px solid ${GOLD}22`, borderRadius: "14px", padding: "10px 14px", marginBottom: "12px" }}>
           <div style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: GOLD, marginBottom: "7px" }}>
             Week {selWeek} Bonus — All Teams
@@ -1233,6 +1276,76 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
     </>)}
 
     <LostBallTimer />
+
+    {/* ── Play mode: bonus drawer + dock ── */}
+    {playMode && myPos && (<>
+      {boardOpen && (
+        <div onClick={() => setBoardOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 48 }} />
+      )}
+      {boardOpen && (
+        <div style={{
+          position: "fixed", left: 0, right: 0, bottom: "58px", zIndex: 49,
+          maxHeight: "62vh", overflowY: "auto", background: CARD2,
+          borderTop: `1px solid ${GOLD}44`, borderRadius: "14px 14px 0 0",
+          boxShadow: "0 -6px 20px rgba(0,0,0,0.18)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: `1px solid ${GOLD}22`, position: "sticky", top: 0, background: CARD2 }}>
+            <b style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: M }}>Bonus · as it stands</b>
+            {!liveBoard.allComplete && (
+              <span style={{ fontSize: "10px", color: GO, fontWeight: 700 }}>not all teams finished</span>
+            )}
+          </div>
+          {liveBoard.rows.map((r, i) => {
+            const prev = liveBoard.rows[i - 1];
+            const newTier = !prev || prev.bonus !== r.bonus;
+            return (
+              <div key={r.tid}>
+                {newTier && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "7px", padding: "3px 14px", background: GOLD + "16" }}>
+                    <span style={{ fontSize: "9.5px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: GOLD }}>
+                      {r.bonus} pts
+                    </span>
+                    <i style={{ flex: 1, height: "1px", background: GOLD + "33" }} />
+                  </div>
+                )}
+                <div style={{
+                  display: "flex", alignItems: "center", gap: "8px", padding: "6px 14px",
+                  fontSize: "12.5px", borderBottom: `1px solid ${GOLD}11`,
+                  background: r.tid === selTeam ? G + "1f" : "transparent",
+                }}>
+                  <span style={{ width: "18px", fontWeight: 800, fontSize: "11.5px", color: M }}>{r.rank}</span>
+                  <span style={{ flex: 1, fontWeight: r.tid === selTeam ? 800 : 600, color: r.tid === selTeam ? G : CREAM, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {TEAMS[r.tid]?.name}
+                  </span>
+                  <span style={{ width: "30px", textAlign: "center", fontSize: "10.5px", fontWeight: 700, color: GOLD }}>
+                    {r.thru === 9 ? "F" : r.thru || "—"}
+                  </span>
+                  <span style={{ width: "26px", textAlign: "right", fontWeight: 800, fontSize: "13px", color: CREAM }}>{r.total}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div style={{
+        position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 50,
+        background: "#16351f", color: "#fff", display: "flex", alignItems: "center",
+        gap: "10px", padding: "9px 12px",
+      }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <b style={{ fontSize: "14.5px" }}>{myPos.rank}{["th","st","nd","rd"][(myPos.rank%100-20)%10] || ["th","st","nd","rd"][myPos.rank%100] || "th"} of {myPos.of}</b>
+          <span style={{ display: "block", fontSize: "10px", color: "#a9c6b4", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            tracking {myPos.bonus} bonus pt{myPos.bonus === 1 ? "" : "s"}
+            {myPos.nextBonus !== null && ` · ${myPos.gap === 0 ? "level with" : myPos.gap + " off"} the ${myPos.nextBonus}s`}
+          </span>
+        </div>
+        <button onClick={() => setBoardOpen(o => !o)}
+          style={{ background: "rgba(255,255,255,0.16)", border: "none", color: "#fff", borderRadius: "8px", padding: "8px 12px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", fontFamily: FB, flexShrink: 0 }}>
+          Board {boardOpen ? "▼" : "▲"}
+        </button>
+      </div>
+    </>)}
   </div>
   );
 }
