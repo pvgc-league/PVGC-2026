@@ -402,6 +402,51 @@ function calcLiveBoard(week, results, handicaps, schedule = SCHEDULE) {
   return { allComplete, bonus, rows: sorted.map((t, i) => ({ ...t, rank: i + 1, bonus: bonus[t.tid] || 0 })) };
 }
 
+// Pace of play. Groups tee in the order they appear in the week's pairs, one slot
+// apart, so a group N slots ahead should be roughly N holes further along. That
+// offset is what makes a comparison fair — without it a late tee time looks slow.
+//
+// Prefers the nearest group ahead that has scores (how pace actually works: you're
+// slow when a gap opens in front). Falls back to the median of every other group
+// with scores, which survives one group not entering. Returns null when nothing is
+// known — staying silent beats a wrong accusation, and every reading here depends
+// on groups entering scores as they play.
+function calcPace(week, results, schedule = SCHEDULE, myTid = null) {
+  const pairs = (schedule[week]?.pairs || []).filter(Array.isArray);
+  if (!pairs.length || !myTid) return null;
+
+  const groupThru = (pair) => {
+    const [lo, hi] = pair[0] < pair[1] ? pair : [pair[1], pair[0]];
+    const rec = results[week]?.[matchKey(week, lo, hi)];
+    if (!rec) return 0;
+    return Math.max(teamThruHoles(rec, 0), teamThruHoles(rec, 1));
+  };
+
+  const myIdx = pairs.findIndex(p => p.includes(myTid));
+  if (myIdx < 0) return null;
+  const myThru = groupThru(pairs[myIdx]);
+  if (!myThru) return null; // haven't started — nothing to judge
+
+  // What my thru "should" be to match group g, adjusted for the slots between us.
+  const expectedFrom = (gIdx) => groupThru(pairs[gIdx]) + (gIdx - myIdx);
+
+  // 1. Nearest group ahead with scores.
+  for (let i = myIdx - 1; i >= 0; i--) {
+    if (groupThru(pairs[i]) > 0) {
+      const behind = expectedFrom(i) - myThru;
+      return { behind, myThru, basis: "ahead", aheadPair: pairs[i] };
+    }
+  }
+
+  // 2. Fall back to the field.
+  const others = pairs.map((_, i) => i).filter(i => i !== myIdx && groupThru(pairs[i]) > 0);
+  if (!others.length) return null;
+  const vals = others.map(expectedFrom).sort((a, b) => a - b);
+  const mid = Math.floor(vals.length / 2);
+  const median = vals.length % 2 ? vals[mid] : Math.round((vals[mid - 1] + vals[mid]) / 2);
+  return { behind: median - myThru, myThru, basis: "field" };
+}
+
 // One-line summary for the play-mode dock: where a team sits and what it would
 // take to reach the next bonus tier. Tying the lowest total in a tier is enough,
 // since teams on the same total share a bucket.
@@ -1119,6 +1164,7 @@ export {
   getLoHiOrder,
   calcLiveBoard,
   describeBonusPosition,
+  calcPace,
   teamThruHoles,
   calcSuggestedHcps,
   initMatch,

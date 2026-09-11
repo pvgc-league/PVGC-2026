@@ -1,5 +1,5 @@
 import { PAR, SI, RAINOUT_SUB, TEAMS, SCHEDULE } from "../constants/league";
-import { stabPts, hcpStr, maxGross, getEffectiveHcp, getEffectiveHcpRaw, computeTeamTotal, matchKey, getLoHiOrder } from "../lib/leagueLogic";
+import { stabPts, hcpStr, maxGross, getEffectiveHcp, getEffectiveHcpRaw, computeTeamTotal, matchKey, getLoHiOrder, calcPace } from "../lib/leagueLogic";
 import { BG, CARD, CARD2, CREAM, FB, FD, G, GO, GOLD, M, R } from "../constants/theme";
 import { fmtDate } from "../lib/format";
 import { Tag, PtsBadge } from "./ui";
@@ -381,6 +381,11 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
     setTimeout(() => w.print(), 300);
   }
 
+  // Pace nudge — private to this group. Only shown when a full hole has opened up
+  // beyond the natural slot separation, so normal noise stays quiet.
+  const pace = playMode ? calcPace(selWeek, league.results, SCHEDULE, selTeam) : null;
+  const behindBy = pace && pace.behind >= 1 ? pace.behind : 0;
+
   return (<div style={{ maxWidth: "820px", margin: "0 auto", padding: "14px 10px" }}>
 
     {playMode && (
@@ -396,6 +401,20 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
           style={{ background: "rgba(255,255,255,0.16)", border: "none", color: "#fff", borderRadius: "6px", padding: "5px 9px", fontSize: "11px", fontWeight: 700, cursor: "pointer", fontFamily: FB }}>
           Exit
         </button>
+      </div>
+    )}
+
+    {playMode && behindBy > 0 && (
+      <div style={{
+        display: "flex", alignItems: "center", gap: "7px",
+        background: GO + "1a", border: `1px solid ${GO}44`, borderRadius: "10px",
+        padding: "8px 11px", margin: "0 0 12px", fontSize: "12.5px", color: GO, fontWeight: 600,
+      }}>
+        <span style={{ fontSize: "14px" }}>⏱</span>
+        <span>
+          {behindBy === 1 ? "About a hole behind" : `About ${behindBy} holes behind`}
+          {pace.basis === "ahead" ? " the group ahead" : " the field"} — pick it up if you can.
+        </span>
       </div>
     )}
 
