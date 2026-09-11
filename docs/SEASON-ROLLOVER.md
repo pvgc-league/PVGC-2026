@@ -1,5 +1,9 @@
 # Season Rollover — Archive 2026, Set Up 2027
 
+> **Status (2026-09-11):** Phase 0 complete. Phase 1 complete except §1.4
+> (schedule), which is parked until March. Phase 2 not started.
+> 2027 constants are scaffolded but deliberately NOT registered or active.
+
 Handoff spec. Written after the 2026 season closed (Finals Sept 9, 2026).
 Scope and policy decisions below are settled — don't re-litigate them, build to them.
 
@@ -26,7 +30,7 @@ yearly-churn data moves to Firestore.
 
 ## Phase 0 — Archive 2026
 
-### 0.1 Durable export
+### 0.1 Durable export — ✅ DONE (`archives/league-2026.json`, 155 matches)
 `scripts/archive-season.cjs <year>` → writes `archives/league-<year>.json` containing
 the league doc plus the `weekScores` and `confirmedScores` subcollections. Commit it.
 
@@ -34,7 +38,7 @@ the league doc plus the `weekScores` and `confirmedScores` subcollections. Commi
 > [`App.jsx:420`](../src/App.jsx#L420) deletes excess snapshots on a cap. It's an
 > in-season undo buffer, not a durable record.
 
-### 0.2 Season-level lock
+### 0.2 Season-level lock — ✅ DONE (7 write paths, `isLeagueWriteBlocked` + tests)
 Add `league.locked` (bool). Enforce **centrally** in `saveLeague`
 ([`App.jsx:225`](../src/App.jsx#L225)) and `saveMatchDoc`
 ([`App.jsx:253`](../src/App.jsx#L253)) — reject writes when set.
@@ -48,14 +52,22 @@ Persist `locked` in all **three** spots (established pattern — see `recapEnabl
 2. `LEAGUE_DOC.onSnapshot` handler ([`App.jsx:180`](../src/App.jsx#L180))
 3. `applySnapshotToLeague` ([`src/lib/persistence.js`](../src/lib/persistence.js))
 
-### 0.3 Make the season selector real
-In [`src/constants/league.js`](../src/constants/league.js):
-- `AVAILABLE_SEASONS: [2026] → [2026, 2027]`
-- Default/fallback season in `readSeasonYear()` → 2027
-- Replace the `ACTIVE` ternary chain (line 21) with a `{2024: L2024, 2025: L2025, ...}`
-  map — it's already awkward at 3 seasons and gets worse each year.
+### 0.3 Make the season selector real — ⚠️ PARTIALLY DONE
 
-### 0.4 Dead-code cleanup (deferred from the 2026 playoffs)
+Done: the `ACTIVE` ternary chain is replaced by a `SEASONS` registry, and 2024/2025
+are removed entirely (their spreadsheets carried manual adjustments the app could
+never reproduce).
+
+**Changed from the original plan:** registering a season no longer activates it.
+`CURRENT_SEASON` was briefly derived as the highest registered year, which meant
+adding 2027 would have made it everyone's default *before it had a schedule* —
+breaking the app for the whole league. It's now an explicit constant.
+
+Remaining, once the 2027 schedule exists:
+1. Add `2027: L2027` to `SEASONS`
+2. Bump `CURRENT_SEASON` to 2027
+
+### 0.4 Dead-code cleanup — ✅ DONE (−70 KB bundle)
 Board (`masters`), Predict, and Pulse were pulled from the nav but their code and
 render blocks still ship. The season is over — delete them: the components, the
 imports, the `screen===` blocks ([`App.jsx:906`](../src/App.jsx#L906), 999, 1003),
@@ -65,7 +77,7 @@ and their `TAB_LABEL` entries. Also remove the admin Weekly Points table.
 
 ## Phase 1 — Season setup tooling
 
-### 1.1 Handicap capture (highest-value automation)
+### 1.1 Handicap capture — ✅ DONE (`npm run capture-hcp -- 2026`)
 `scripts/capture-handicaps.cjs <fromYear>` → emits a `DEFAULT_HCP` block for the
 next season.
 
@@ -87,7 +99,7 @@ Capturing at week 22 would advance those 8 players' handicaps while leaving the 
 
 Output shape must match `DEFAULT_HCP`: `{ [tid]: [p1hcp, p2hcp] }`.
 
-### 1.2 Single source of truth for starting handicaps
+### 1.2 Single source of truth for starting handicaps — ✅ DONE
 [`scripts/push2026.cjs`](../scripts/push2026.cjs#L28) and
 [`league_2026.js`](../src/constants/league_2026.js) each hold a hand-maintained
 `DEFAULT_HCP`, and **8 players across 6 teams disagree**.
@@ -123,7 +135,7 @@ for the whole season.
 **Fix:** the push script must **import** `DEFAULT_HCP` from the constants file, never
 redeclare it. Delete the stale literal as part of this.
 
-### 1.3 Scaffold the new season
+### 1.3 Scaffold the new season — ✅ DONE (`npm run new-season -- 2027`)
 `scripts/new-season.cjs 2027`:
 - Copy `TEAMS` forward from 2026 (churn is minimal — carry, then hand-edit 1–2 slots)
 - Insert captured `DEFAULT_HCP` from 1.1
@@ -133,11 +145,45 @@ redeclare it. Delete the stale literal as part of this.
 
 Follows the existing `import20XX.py` / `push20XX.cjs` precedent.
 
-### 1.4 Schedule
-18 teams × 17 weeks round-robin generator, or paste from the spreadsheet as today.
-Lower priority than 1.1 — it's once a year and the current path works.
+### 1.4 Schedule — PARKED until March
 
----
+**Timing, from the 2026 season's own history:** `SCHEDULE_RAW` first landed
+**Mar 18**, was refined through **Apr 10**, and opening day was **Apr 15**. Starting
+handicaps followed the same curve — drafted Mar 27, corrected from the official
+sheet Apr 13. So roughly four weeks of lead time, finalised about a week out.
+
+Order matters: **roster → handicaps → schedule.** You can't pair teams that don't
+exist yet, and re-pairing teams invalidates a captured handicap set.
+
+#### The tee-time accommodation is being silently dropped
+
+A few teams need **later start times for work schedules**. The commissioner already
+handles this in the spreadsheet by ordering each week's matchups so those teams fall
+late — but **only the pairings are copied into `SCHEDULE_RAW`, not the ordering**, so
+the accommodation never reaches the app.
+
+This is load-bearing because tee times are assigned **by position**:
+`getTeeTimes(week)[i]` maps to `pairs[i]`. The order of the 9 pairs in a week *is*
+the tee sheet.
+
+Measured across 2026's 17 regular-season weeks (slot 0 = 4:10 PM, 8 = 5:30 PM):
+
+| Team | avg slot | weeks at 5:10+ |
+|---|---|---|
+| Charles - Dagg | 5.29 | 9/17 |
+| Jurden - Olivos | 5.06 | 9/17 |
+| *(middle 14)* | ~3.5–4.6 | 4–7/17 |
+| Pineno - MacKenzie | 3.41 | 4/17 |
+| Posey - Minasian | 3.41 | 4/17 |
+
+A flat 3.41–5.29 spread — close to random, no team consistently late.
+`TEE_TIME_OVERRIDES` was also empty for 2026 apart from the Week 19 quarterfinals.
+So the app has never reflected the accommodation.
+
+**In March:** get the *ordered* weeks out of the spreadsheet, not just the pairings.
+Deliberately not tooled ahead of time — decide then whether that means a generator
+that takes late-start preferences as input, or just carefully preserving the
+spreadsheet's ordering on the way in.
 
 ## Phase 2 — Admin screens
 
