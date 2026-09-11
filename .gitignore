@@ -5,3 +5,6 @@ assets/
 .env
 .env.*
 !.env.example
+
+# esbuild intermediates from npm run capture-hcp
+scripts/.*.build.mjs

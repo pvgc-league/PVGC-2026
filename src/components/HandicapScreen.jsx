@@ -1,4 +1,4 @@
-import { ALL_PLAYERS, TEAMS, DEFAULT_HCP, isNewMember, HCP_PCT, HCP_CAP, HCP_ROUNDS, NEW_MEMBER_HCP_PCT, SEASON_YEAR, RAINOUT_SUB, PAR, SI, SCHEDULE } from "../constants/league";
+import { ALL_PLAYERS, TEAMS, DEFAULT_HCP, isNewMember, HCP_PCT, HCP_CAP, HCP_ROUNDS, NEW_MEMBER_HCP_PCT, RAINOUT_SUB, PAR, SI, SCHEDULE } from "../constants/league";
 import { G, GO, R, M, CREAM, GOLD, CARD2, FD, FB } from "../constants/theme";
 import { getEffectiveHcp, getEffectiveHcpRaw, getOpponent, matchKey, hcpStr, maxGross } from "../lib/leagueLogic";
 
@@ -238,21 +238,8 @@ function HandicapScreen({ league, saveLeague, isAdmin, schedule = SCHEDULE }) {
           <strong style={{ color: CREAM }}>Formula:</strong> <code style={{ color: G }}>round(PCT × (avg gross − 36))</code>
           {HCP_CAP != null && ` · capped at start HCP + ${HCP_CAP} for returning members`}
           <div style={{ marginTop: "6px", display: "flex", gap: "20px", flexWrap: "wrap" }}>
-            {SEASON_YEAR === 2024 ? (
-              <>
-                <span><strong style={{ color: CREAM }}>Rd 1:</strong> 65%</span>
-                <span><strong style={{ color: CREAM }}>Rd 2:</strong> 70%</span>
-                <span><strong style={{ color: CREAM }}>Rd 3:</strong> 75%</span>
-                <span><strong style={{ color: CREAM }}>Rd 4:</strong> 80%</span>
-                <span><strong style={{ color: CREAM }}>Rd 5+:</strong> 90% of avg of all scores, no cap</span>
-                <span><strong style={{ color: "#f0a050" }}>New members:</strong> always 60%, all rounds, no cap</span>
-              </>
-            ) : (
-              <>
-                <span><strong style={{ color: CREAM }}>Veterans:</strong> 90%{HCP_ROUNDS ? ` of avg of best ${HCP_ROUNDS} scores` : ""}</span>
-                <span><strong style={{ color: "#f0a050" }}>New members:</strong> {Math.round(NEW_MEMBER_HCP_PCT * 100)}% rounds 1–{HCP_ROUNDS}, then 90% of best {HCP_ROUNDS} from round {HCP_ROUNDS + 1}+, no cap</span>
-              </>
-            )}
+            <span><strong style={{ color: CREAM }}>Veterans:</strong> 90%{HCP_ROUNDS ? ` of avg of best ${HCP_ROUNDS} scores` : ""}</span>
+            <span><strong style={{ color: "#f0a050" }}>New members:</strong> {Math.round(NEW_MEMBER_HCP_PCT * 100)}% rounds 1–{HCP_ROUNDS}, then 90% of best {HCP_ROUNDS} from round {HCP_ROUNDS + 1}+, no cap</span>
           </div>
         </div>
 

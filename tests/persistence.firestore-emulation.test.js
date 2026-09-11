@@ -6,7 +6,7 @@ import {
   decodeResults,
   applySnapshotToLeague,
 } from "../src/lib/persistence.js";
-import { loadBacktestData } from "./helpers/backtestDataset.js";
+import { loadArchiveFixture } from "./helpers/archiveFixture.js";
 
 class InMemoryLeagueDoc {
   constructor() {
@@ -52,7 +52,7 @@ class InMemoryLeagueDoc {
 
 describe("Firestore persistence emulation", () => {
   it("encodes and decodes match results losslessly", () => {
-    const { league } = loadBacktestData(2);
+    const { league } = loadArchiveFixture(2);
     const encoded = encodeResults(league.results);
     const decoded = decodeResults(encoded);
 
@@ -61,7 +61,7 @@ describe("Firestore persistence emulation", () => {
   });
 
   it("preserves prior weeks across merge saves and snapshot reloads", async () => {
-    const { league } = loadBacktestData(2);
+    const { league } = loadArchiveFixture(2);
     const doc = new InMemoryLeagueDoc();
 
     const week1State = {
@@ -98,7 +98,7 @@ describe("Firestore persistence emulation", () => {
   });
 
   it("emits snapshot listeners with merged payload", async () => {
-    const { league } = loadBacktestData(1);
+    const { league } = loadArchiveFixture(1);
     const doc = new InMemoryLeagueDoc();
 
     let observed = null;
