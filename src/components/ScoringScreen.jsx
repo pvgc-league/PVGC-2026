@@ -792,8 +792,18 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
                               userSelect: "none", touchAction: "manipulation"
                             }}>+</button>
                         </div>
-                        {/* Raw / Max / Net + stab column */}
-                        {gross > 0 && (
+                        {/* Result column. Play mode shows just net + points — the
+                            raw/max breakdown is detail you don't need on the tee. */}
+                        {gross > 0 && playMode && (
+                          <div style={{ minWidth: "44px", textAlign: "right" }}>
+                            <div style={{ fontSize: "15px", fontWeight: 800, color: CREAM, lineHeight: 1 }}>
+                              {getNet(r.tIdx, r.pi, r.tid, hole)}
+                            </div>
+                            <div style={{ fontSize: "10px", color: M, lineHeight: 1, margin: "2px 0 3px" }}>net</div>
+                            <PtsBadge pts={pts} />
+                          </div>
+                        )}
+                        {gross > 0 && !playMode && (
                           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1px", minWidth: "44px" }}>
                             <div style={{ fontSize: "9px", color: M, letterSpacing: "0.04em", lineHeight: 1.2 }}>RAW</div>
                             <div style={{ fontSize: "13px", fontWeight: 700, color: atMax ? GO : CREAM, lineHeight: 1 }}>{gross}</div>
@@ -815,7 +825,31 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
             })}
           </div>
 
+          {/* Play mode: one Us / Them / Match strip instead of the per-player
+              breakdown cards below — the match state at a glance, nothing else. */}
+          {playMode && (() => {
+            const teamStab = (tIdx) => rows.filter(r => r.tIdx === tIdx)
+              .reduce((sum, r) => sum + getRunTotal(r.tIdx, r.pi, r.tid), 0);
+            const us = teamStab(0), them = teamStab(1);
+            const diff = us - them;
+            const cell = (lbl, val, sub, bg) => (
+              <div style={{ flex: 1, padding: "9px 10px", textAlign: "center", background: bg }}>
+                <div style={{ fontSize: "9.5px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#a9c6b4" }}>{lbl}</div>
+                <div style={{ fontSize: "20px", fontWeight: 800, color: "#fff", marginTop: "4px" }}>{val}</div>
+                <div style={{ fontSize: "10px", color: "#a9c6b4", marginTop: "3px" }}>{sub}</div>
+              </div>
+            );
+            return (
+              <div style={{ display: "flex", background: "#1d3f28", borderRadius: "12px", overflow: "hidden", marginBottom: "13px" }}>
+                {cell("Us", us, TEAMS[t1id]?.name, "#215030")}
+                {cell("Them", them, TEAMS[t2id]?.name, "transparent")}
+                {cell("Match", diff > 0 ? `+${diff}` : diff, diff > 0 ? "up" : diff < 0 ? "down" : "level", "transparent")}
+              </div>
+            );
+          })()}
+
           {/* Gross / Net / Stab summary strip */}
+          {!playMode && (
           <div style={{
             background: CARD2, border: `1px solid ${GOLD}22`,
             borderRadius: "14px", padding: "10px 14px", marginBottom: "13px",
@@ -901,8 +935,10 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
               );
             })}
           </div>
+          )}
 
           {/* Full 4-row scrollable scorecard */}
+          {!playMode && (
           <div style={{
             background: CARD2, border: `1px solid ${GOLD}22`,
             borderRadius: "14px", overflow: "hidden", marginBottom: "12px"
@@ -1023,9 +1059,10 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
               </table>
             </div>
           </div>
+          )}
 
           {/* Match Summary */}
-          {(() => {
+          {!playMode && (() => {
             if (isCancelled) return (
               <div style={{ background: "rgba(180,120,0,0.1)", border: `1px solid #e6a81744`, borderRadius: "12px", padding: "12px 16px", marginBottom: "12px", fontSize: "13px", color: "#e6a817", fontWeight: 600 }}>
                 ⛈ Week {selWeek} was cancelled — no match points awarded
