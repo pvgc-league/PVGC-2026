@@ -48,3 +48,40 @@ describe("handicaps count every scored round", () => {
     expect(getEffectiveHcp(1, 0, WEEK + 1, r, startHcp, {}, null, startHcp, () => false)).toBe(hcpAfter(true));
   });
 });
+
+// The bug this actually guards against. calcAutoHcp averages gross against par 36,
+// so a part-entered card reads as an extraordinary round: four holes total about 18
+// and 0.9 * (18 - 36) lands near -16. Entering scores hole by hole is normal, so
+// without this every handicap collapses while a week is in progress. Reported from
+// 2027 testing as "our handicaps for next week are -22".
+describe("only complete rounds count toward handicaps", () => {
+  const start = { 1: [5, 5], 2: [10, 10] };
+  const partial = (n) => Array.from({ length: 9 }, (_, h) => (h < n ? 5 : 0));
+  const withHoles = (n, extra = {}) => ({
+    1: { "1-1-2": {
+      t1scores: [partial(n), partial(n)], t2scores: [partial(n), partial(n)],
+      t1types: ["normal", "normal"], t2types: ["normal", "normal"],
+      hcpSnapshot: { 1: [5, 5], 2: [10, 10] }, ...extra,
+    } },
+  });
+  const hcp = (res) => getEffectiveHcp(1, 0, 2, res, start, {}, null, start, () => false);
+
+  it.each([1, 3, 4, 8])("ignores a round with only %i holes entered", (n) => {
+    expect(hcp(withHoles(n))).toBe(5); // unchanged from the starting handicap
+  });
+
+  it("never produces a negative handicap from a part-entered card", () => {
+    for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      expect(hcp(withHoles(n)), `${n} holes`).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("counts the round once all nine holes are in", () => {
+    expect(hcp(withHoles(9))).not.toBe(5);
+  });
+
+  it("still counts a rainout round, where unplayed holes are substituted", () => {
+    // Six holes played; RAINOUT_SUB fills 7-9 from earlier holes, so it reaches nine.
+    expect(hcp(withHoles(6, { rainout: true }))).not.toBe(5);
+  });
+});

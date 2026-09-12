@@ -729,15 +729,21 @@ function buildGrossHistory(results, upToWeek, defaultHcp=DEFAULT_HCP, cancelledW
           // Cancelled weeks have no records, so they are naturally excluded.
           // Use hcpSnapshot stored with the record for accurate per-hole cap
           const hcp = rec.hcpSnapshot ? (rec.hcpSnapshot[tid] || [0,0])[pi] : (defaultHcp[tid] || [0,0])[pi];
-          let gross = 0;
+          let gross = 0, holesPlayed = 0;
           for (let hi = 0; hi < 9; hi++) {
             const effHi = (rec.rainout && !((scores[pi] || [])[hi]) && RAINOUT_SUB[hi] !== undefined)
               ? RAINOUT_SUB[hi]
               : hi;
             const raw = (scores[pi] || [])[effHi] || 0;
-            if (raw > 0) gross += Math.min(raw, maxGross(PAR[hi], hcpStr(hcp, SI[hi])));
+            if (raw > 0) { gross += Math.min(raw, maxGross(PAR[hi], hcpStr(hcp, SI[hi]))); holesPlayed++; }
           }
-          if (gross > 0) history[tid][pi].push(gross);
+          // Only a FULL round counts. calcAutoHcp works off avg gross against par
+          // 36, so a part-entered card is read as an extraordinary round: four
+          // holes total about 18, and 0.9 * (18 - 36) lands near -16. Mid-round
+          // entry is normal, so without this every handicap collapses while a
+          // week is being played. Rainout weeks still qualify — unplayed holes
+          // are substituted above, so they reach nine.
+          if (holesPlayed === 9) history[tid][pi].push(gross);
         });
       });
     }
