@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "capture-hcp": "esbuild scripts/capture-handicaps.mjs --bundle --platform=node --format=esm --packages=external --outfile=scripts/.capture-hcp.build.mjs && node scripts/.capture-hcp.build.mjs",
     "new-season": "esbuild scripts/new-season.mjs --bundle --platform=node --format=esm --packages=external --outfile=scripts/.new-season.build.mjs && node scripts/.new-season.build.mjs",
-    "build-schedule": "esbuild scripts/build-schedule.mjs --bundle --platform=node --format=esm --packages=external --outfile=scripts/.build-schedule.build.mjs && node scripts/.build-schedule.build.mjs"
+    "build-schedule": "esbuild scripts/build-schedule.mjs --bundle --platform=node --format=esm --packages=external --outfile=scripts/.build-schedule.build.mjs && node scripts/.build-schedule.build.mjs",
+    "carry-season": "esbuild scripts/carry-season.mjs --bundle --platform=node --format=esm --packages=external --outfile=scripts/.carry-season.build.mjs && node scripts/.carry-season.build.mjs"
   },
   "dependencies": {
     "firebase": "^12.0.0",

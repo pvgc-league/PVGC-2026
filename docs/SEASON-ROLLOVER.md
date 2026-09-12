@@ -64,8 +64,11 @@ adding 2027 would have made it everyone's default *before it had a schedule* —
 breaking the app for the whole league. It's now an explicit constant.
 
 Remaining, once the 2027 schedule exists:
-1. Add `2027: L2027` to `SEASONS`
-2. Bump `CURRENT_SEASON` to 2027
+1. Finalise the roster in `league_2027.js`
+2. `npm run carry-season -- 2026 2027 --write` (must be after the roster is final —
+   contacts are remapped by player name)
+3. Remove `2027` from `DRAFT_SEASONS`
+4. Bump `CURRENT_SEASON` to 2027
 
 ### 0.4 Dead-code cleanup — ✅ DONE (−70 KB bundle)
 Board (`masters`), Predict, and Pulse were pulled from the nav but their code and
@@ -144,6 +147,33 @@ redeclare it. Delete the stale literal as part of this.
 - Seed the `pvgc/league-2027` Firestore doc with the starting handicaps
 
 Follows the existing `import20XX.py` / `push20XX.cjs` precedent.
+
+### 1.3b Carry league config into the new season — ✅ DONE (`npm run carry-season -- 2026 2027`)
+
+**A new season's Firestore doc starts empty, and three separate defaults treat empty
+as permissive.** Switching to a season whose doc hasn't been seeded would:
+
+| Field | Empty behaviour | Consequence |
+|---|---|---|
+| `allowedEmails: []` | AuthGate: *"not yet configured, let everyone through"* | **Anyone with a Google account can sign in** |
+| `adminPin: undefined` | `adminUnlock`: *"any non-empty entry unlocks"* | **Anyone can become admin with any PIN** |
+| `adminEmails: []` | auto-revoke guard returns early | Nothing catches the above |
+
+Plus 34 contacts, 12 rules, the budget config and the subs list silently gone.
+
+`scripts/carry-season.mjs` closes this. Dry run by default; `--write` to apply.
+
+- **Carried:** `adminEmails`, `adminPin`, `allowedEmails`, `contacts`, `subs`, `rules`, `budget`
+- **Reset:** `results`, `handicaps`, `dues`, `cancelledWeeks`, `readOnlyWeeks`, `recaps`,
+  `recapEnabled`, `hcpOverrides`, `loHiOverrides`, `seedOverrides`, `banner`, `locked`
+
+> **Contacts are keyed by `tid-pi` — a slot, not a person.** The script remaps them by
+> player name, so a reshuffled roster can't hand someone else's phone number to a new
+> pairing, and departed members are dropped rather than inherited. This is why it must
+> run **after** the roster is final, not before.
+
+Handicaps are deliberately not carried — they come from the new season's constants
+file via `capture-hcp`.
 
 ### 1.4 Schedule — PARKED until March
 
