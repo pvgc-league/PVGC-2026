@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { TEAMS, SCHEDULE_RAW, SCHEDULE } from "../constants/league";
-import { isWeekFullyConfirmed } from "../lib/leagueLogic";
+import { isWeekFullyConfirmed, isMatchComplete, matchKey } from "../lib/leagueLogic";
 import { G, GO, R, M, CREAM, GOLD, CARD2, FD, FB } from "../constants/theme";
 
 const AMBER = "#e6a817";
@@ -51,6 +51,17 @@ export default function WeeklyScreen({ weeklyTeamPts, results, cancelledWeeks, s
 
   const isCancelled = cancelledWeeks?.has(selWeek);
   const bonusConfirmed = !isCancelled && results ? isWeekFullyConfirmed(selWeek, results) : false;
+  // Bonus ranks all 18 teams against each other, so it cannot be computed at all
+  // until every match in the week is in — calcWeekBonus returns null before that.
+  // Without this the table showed "~0" for everyone, which reads as a calculated
+  // zero rather than "not yet available".
+  const weekPairs = ((schedule || SCHEDULE)[selWeek]?.pairs || []).filter(Array.isArray);
+  const bonusReady = !isCancelled && weekPairs.length > 0 && weekPairs.every(([a, b]) =>
+    isMatchComplete(results?.[selWeek]?.[matchKey(selWeek, Math.min(a, b), Math.max(a, b))])
+  );
+  const matchesIn = weekPairs.filter(([a, b]) =>
+    isMatchComplete(results?.[selWeek]?.[matchKey(selWeek, Math.min(a, b), Math.max(a, b))])
+  ).length;
 
   // Build ranked list — include cancelled weeks showing 0 pts
   const weekEntries = isCancelled
@@ -156,9 +167,9 @@ export default function WeeklyScreen({ weeklyTeamPts, results, cancelledWeeks, s
                 </div>
                 <div style={{
                   textAlign: "center", fontSize: "13px", fontWeight: 700,
-                  color: isCancelled ? M : bonusConfirmed ? G : AMBER
-                }} title={isCancelled ? "" : bonusConfirmed ? "Confirmed" : "Estimated — not all teams have confirmed yet"}>
-                  {isCancelled ? "—" : `${bonusConfirmed ? "" : "~"}${e.bonusPts ?? 0}`}
+                  color: isCancelled || !bonusReady ? M : bonusConfirmed ? G : AMBER
+                }} title={isCancelled ? "" : !bonusReady ? "Not yet available — every match in the week must be complete" : bonusConfirmed ? "Confirmed" : "Estimated — not all teams have confirmed yet"}>
+                  {isCancelled || !bonusReady ? "—" : `${bonusConfirmed ? "" : "~"}${e.bonusPts ?? 0}`}
                 </div>
                 <div style={{
                   textAlign: "center", fontSize: "18px", fontWeight: 700,
@@ -176,11 +187,13 @@ export default function WeeklyScreen({ weeklyTeamPts, results, cancelledWeeks, s
           </div>
           {!isCancelled && (
             <div style={{
-              padding: "0 14px 9px", fontSize: "11px", color: bonusConfirmed ? M : AMBER, fontWeight: bonusConfirmed ? 400 : 600
+              padding: "0 14px 9px", fontSize: "11px", color: !bonusReady ? M : bonusConfirmed ? M : AMBER, fontWeight: bonusConfirmed || !bonusReady ? 400 : 600
             }}>
-              {bonusConfirmed
-                ? "✓ Bonus points confirmed — all matches locked in"
-                : "~ Bonus points are estimated until every team this week confirms their score"}
+              {!bonusReady
+                ? `Bonus points need every match in the week — ${matchesIn} of ${weekPairs.length} are complete. They rank all 18 teams, so there is nothing to award until the field is in.`
+                : bonusConfirmed
+                  ? "✓ Bonus points confirmed — all matches locked in"
+                  : "~ Bonus points are estimated until every team this week confirms their score"}
             </div>
           )}
         </div>
