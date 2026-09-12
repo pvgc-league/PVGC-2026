@@ -565,8 +565,10 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
           return last ? `${first} ${last[0]}.` : first;
         };
 
-        // Grouped by matchup for play mode: low pair, then high pair.
-        const orderedRows = playMode ? [rows[0], rows[2], rows[1], rows[3]] : rows;
+        // Team order everywhere: your low, your high, their low, their high. The
+        // matchup card under the team strip carries the low-vs-low pairing, so the
+        // rows don't need to interleave the two sides.
+        const orderedRows = rows;
 
         const getGross = (tIdx, pi, hi) => (tIdx === 0 ? match.t1scores : match.t2scores)[pi]?.[hi] || 0;
         // Score-aware rainout sub: only redirect to substitute hole if actual hole has no score
@@ -717,9 +719,8 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
               const pts = getPtsFor(r.tIdx, r.pi, r.tid, hole);
               const subForRow = match.subs && match.subs[`${r.tid}-${r.pi}`];
               const pname = playMode ? shortName(r) : (subForRow ? subForRow.name : (TEAMS[r.tid]?.[r.pi === 0 ? "p1" : "p2"] || ""));
-              // Team order separates after 2; matchup order needs a header before each pair.
-              const isSep = !playMode && ri === 2;
-              const matchupHead = playMode && (ri === 0 || ri === 2) ? (ri === 0 ? "Low vs Low" : "High vs High") : null;
+              const isSep = ri === 2; // divider between the two teams
+              const matchupHead = null;
 
               const cap = maxGross(PAR[scoreEffH(r.tIdx, r.pi, hole)], strokes);
               const adjGross = (delta) => {
@@ -765,6 +766,15 @@ td,th{border:1px solid #999;text-align:center;vertical-align:middle}
                           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"
                         }}>{pname}</span>
                         {!playMode && <Tag color={r.label === "Low" ? "#4db8f0" : "#b97df5"}>{r.label} HCP</Tag>}
+                        {playMode && (
+                          <span style={{
+                            fontSize: "8.5px", fontWeight: 800, letterSpacing: "0.05em",
+                            padding: "2px 5px", borderRadius: "4px", flexShrink: 0,
+                            color: r.label === "Low" ? "#2b7fae" : "#7a4aa8",
+                            background: (r.label === "Low" ? "#4db8f0" : "#b97df5") + "22",
+                            border: `1px solid ${r.label === "Low" ? "#4db8f0" : "#b97df5"}55`,
+                          }}>{r.label.toUpperCase()}</span>
+                        )}
                         {type === "sub" && <Tag color={GO}>Sub</Tag>}
                         {type === "phantom" && <Tag color={R}>Phantom</Tag>}
                       </div>
