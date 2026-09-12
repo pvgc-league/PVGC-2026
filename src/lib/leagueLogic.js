@@ -710,11 +710,11 @@ function buildGrossHistory(results, upToWeek, defaultHcp=DEFAULT_HCP, cancelledW
     for (const [key, rec] of Object.entries(weekResults)) {
       if (!rec) continue;
       if (rec.w1stab) continue;
-      // A round only counts toward handicaps once BOTH teams have confirmed it
-      // (confirmMatch sets locked when the second confirmation lands). Scores can
-      // still be corrected until then, so counting them early would move handicaps
-      // on numbers that are not yet settled.
-      if (!rec.locked) continue;
+      // NOTE: deliberately NOT gated on rec.locked (both teams confirmed). That was
+      // tried and reverted 2026-09-12: of the 10 unconfirmed matches in 2026, seven
+      // were fully scored rounds that simply never got a confirmation tap, and
+      // excluding them moved two players' handicaps for an administrative omission
+      // rather than an unsettled score. Every scored round counts.
       const parts = key.split('-');
       const tlow = parseInt(parts[1]);
       const thigh = parseInt(parts[2]);

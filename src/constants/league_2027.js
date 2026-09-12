@@ -92,14 +92,14 @@ const SCHEDULE = buildSchedule();
 // teams play). Regenerate with: npm run capture-hcp -- 2026
 const DEFAULT_HCP = {
   1:  [5,5],    // Brian Charles, Karl Dagg
-  2:  [4,9],    // Steve Brosius, Mike Albano
+  2:  [4,8],    // Steve Brosius, Mike Albano
   3:  [4,9],    // Baz Mistry, Sanjay Reddy
   4:  [7,8],    // Scot Pineno, Scott MacKenzie
   5:  [0,7],    // Jack Carickhoff, Tracy Schantz
   6:  [10,7],   // Scott Glascott, Mark Adler
   7:  [8,9],    // John Harvey, Jeff Rowles
   8:  [7,9],    // Bob Saenz, Dennis Huston
-  9:  [7,10],   // Chris Fahey, Barry Wzorek
+  9:  [6,10],   // Chris Fahey, Barry Wzorek
   10: [7,5],    // Tom Mulvey, Chris Nelson
   11: [8,14],   // Jack West, Ron Herman
   12: [15,1],   // Gabe Lorenz, Jake Huckestein
