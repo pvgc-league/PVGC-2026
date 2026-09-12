@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { ALL_PLAYERS, TEAMS, PAR, SI, RAINOUT_SUB, SCHEDULE, HCP_CAP } from "../constants/league";
+import { ALL_PLAYERS, TEAMS, PAR, SI, RAINOUT_SUB, SCHEDULE } from "../constants/league";
 import { getEffectiveHcp, getEffectiveHcpRaw, getOpponent, matchKey, stabPts, hcpStr, getLoHiOrder } from "../lib/leagueLogic";
 import { G, GO, R, M, CREAM, GOLD, CARD, CARD2, FB, FD } from "../constants/theme";
 import { auth } from "../firebase/client";
@@ -314,21 +314,6 @@ function PlayerProfile({ tid, pi, league, onBack, isAdmin, saveLeague, schedule 
   const [cPhone, setCPhone] = useState("");
   const [cEmail, setCEmail] = useState("");
 
-  // Starting handicap. This is the season seed the whole engine builds on —
-  // calcAutoHcp caps a veteran at startHcp + HCP_CAP, so a wrong seed quietly
-  // distorts a player's ceiling all year. Admin only, and it was previously not
-  // editable anywhere in the UI (HandicapScreen only does per-week overrides).
-  const startHcp = (league.handicaps?.[tid] || [0, 0])[pi];
-  const [editingHcp, setEditingHcp] = useState(false);
-  const [hcpDraft, setHcpDraft] = useState("");
-  function saveStartHcp() {
-    const v = parseInt(hcpDraft, 10);
-    if (Number.isNaN(v)) { setEditingHcp(false); return; }
-    const pair = [...(league.handicaps?.[tid] || [0, 0])];
-    pair[pi] = v;
-    saveLeague({ ...league, handicaps: { ...(league.handicaps || {}), [tid]: pair } });
-    setEditingHcp(false);
-  }
 
   function startContactEdit() {
     setCPhone(savedContact.phone || "");
@@ -403,25 +388,6 @@ function PlayerProfile({ tid, pi, league, onBack, isAdmin, saveLeague, schedule 
             </div>
           )}
 
-          {isAdmin && (
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px", flexWrap: "wrap" }}>
-              <span style={{ fontSize: "11px", color: M, letterSpacing: "0.06em", textTransform: "uppercase" }}>Starting HCP</span>
-              {editingHcp ? (<>
-                <input type="number" value={hcpDraft} onChange={e => setHcpDraft(e.target.value)} autoFocus
-                  onKeyDown={e => { if (e.key === "Enter") saveStartHcp(); if (e.key === "Escape") setEditingHcp(false); }}
-                  style={{ width: "62px", padding: "4px 8px", borderRadius: "7px", border: `1px solid ${GOLD}55`, background: "rgba(255,255,255,0.85)", fontFamily: FB, fontSize: "13px", color: CREAM, outline: "none" }} />
-                <button onClick={saveStartHcp}
-                  style={{ padding: "4px 12px", borderRadius: "7px", border: "none", background: G, color: "#fff", fontFamily: FB, fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Save</button>
-                <button onClick={() => setEditingHcp(false)}
-                  style={{ padding: "4px 10px", borderRadius: "7px", border: "1px solid #c0c8c0", background: "transparent", color: M, fontFamily: FB, fontSize: "12px", cursor: "pointer" }}>Cancel</button>
-              </>) : (<>
-                <span style={{ fontSize: "15px", fontWeight: 700, color: GOLD }}>{startHcp}</span>
-                <button onClick={() => { setHcpDraft(String(startHcp)); setEditingHcp(true); }}
-                  style={{ padding: "3px 10px", borderRadius: "6px", border: `1px solid ${GOLD}55`, background: "transparent", color: M, fontFamily: FB, fontSize: "11px", cursor: "pointer" }}>Edit</button>
-                <span style={{ fontSize: "10px", color: M, opacity: 0.7 }}>season seed — caps this player at +{HCP_CAP ?? 2}</span>
-              </>)}
-            </div>
-          )}
         </div>
         <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
           {[

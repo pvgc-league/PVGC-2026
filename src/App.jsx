@@ -249,7 +249,7 @@ const [seasonYear] = useState(SEASON_YEAR);
     setLeague(next);
     lastSaveTime.current = Date.now();
     try{
-      await LEAGUE_DOC.set({
+      const payload = {
         handicaps: next.handicaps,
         hcpOverrides: next.hcpOverrides||{},
         loHiOverrides: next.loHiOverrides||{},
@@ -266,7 +266,19 @@ const [seasonYear] = useState(SEASON_YEAR);
         recaps: next.recaps || {},
         recapEnabled: !!next.recapEnabled,
         locked: !!next.locked,
-      }, {merge:true});
+      };
+      // This is a whole-object write, so an empty collection here would overwrite
+      // whatever is already stored. For the fields that describe the club rather
+      // than the season, empty nearly always means "this client never loaded it"
+      // — not "the user cleared it". Writing those empties once flattened the
+      // carried 2027 config: contacts, subs, allowedEmails, adminEmails and budget
+      // all went to zero, and access control with them. Omit them instead, so
+      // merge leaves the stored value alone.
+      const isEmpty = (v) => !v || (Array.isArray(v) ? v.length === 0 : Object.keys(v).length === 0);
+      for (const k of ["contacts", "subs", "allowedEmails", "adminEmails", "budget"]) {
+        if (isEmpty(payload[k])) delete payload[k];
+      }
+      await LEAGUE_DOC.set(payload, {merge:true});
       setFbStatus("loaded");
     }catch(e){
       console.warn("Save error:",e);
