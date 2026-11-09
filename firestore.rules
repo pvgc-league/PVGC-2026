@@ -1,36 +1,110 @@
 rules_version = '2';
+// Rules for the shared Firebase project: the PVGC league app and the Pocono
+// Open app both live here. Deploy with:  firebase deploy --only firestore:rules
 service cloud.firestore {
   match /databases/{database}/documents {
-    // PVGC league app — requires auth (anonymous sign-in is enough)
+
+    // ── Who's asking ─────────────────────────────────────────────────────────
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // A real person signed in by email link or Google — not an anonymous
+    // session. Anonymous sign-in is open to anyone holding the web API key,
+    // which ships inside both apps, so "signed in" alone protects nothing.
+    function realUser() {
+      return signedIn()
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true;
+    }
+
+    // Pocono organizers. Keep in step with src/lib/organizers.js in the
+    // pocono-open-2026 repo — the app hides what these rules refuse.
+    function poconoOrganizer() {
+      return realUser()
+        && request.auth.token.email.lower() in ['REPLACE_WITH_ORGANIZER_EMAIL'];
+    }
+
+    // ── PVGC league ──────────────────────────────────────────────────────────
+    // The app already makes everyone sign in by email; these rules now insist
+    // on it too. Scripts (carry-season, archive-season) sign in the same way.
     match /pvgc/{docId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if realUser();
 
       match /weekScores/{scoreId} {
-        allow read, write: if request.auth != null;
+        allow read, write: if realUser();
       }
 
       match /snapshots/{snapId} {
-        allow read, write: if request.auth != null;
+        allow read, write: if realUser();
       }
 
       // Permanent, immutable record of scores as each team confirmed them.
       // Create-only: once written, it can never be changed or deleted.
       match /confirmedScores/{recId} {
-        allow read, create: if request.auth != null;
+        allow read, create: if realUser();
         allow update, delete: if false;
       }
     }
 
-    // Pocono Open 2026 app
+    // ── Pocono Open ──────────────────────────────────────────────────────────
+    // Anyone with the link can read the board and score. Organizers set the
+    // weekend up: players and Venmo usernames, pots, courses, pairings,
+    // handicap locks, the weekend list and the course library.
     match /weekends/{docId} {
-      // Leaderboard, scatts, winnings are public read
       allow read: if true;
-      // Writes require auth (anonymous sign-in is enough)
-      allow write: if request.auth != null;
+
+      allow create, delete: if poconoOrganizer()
+        || (docId == '_casual' && signedIn());
+
+      allow update: if poconoOrganizer()
+        || (docId == '_casual' && signedIn())
+        || (!(docId in ['_index', '_library', '_casual']) && signedIn() && golferUpdate());
 
       match /presence/{sessionId} {
-        allow read, write: if request.auth != null;
+        allow read, write: if signedIn();
       }
+    }
+
+    // What a golfer may change on a weekend: scores and card signatures, a
+    // course for a round that has none, closest-to-the-pin results, the side
+    // games, and the copy of a course a round takes with its first score.
+    function golferUpdate() {
+      let before = resource.data;
+      let after = request.resource.data;
+      let changed = after.diff(before).affectedKeys();
+      return changed.hasOnly(['rounds', 'games', 'sixies', 'thursday', 'courses'])
+        && (!('rounds' in changed) || roundsOk(before.get('rounds', {}), after.get('rounds', {})))
+        && (!('games' in changed) || gamesOk(before.get('games', {}), after.get('games', {})))
+        && (!('courses' in changed) || onlyAdded(before.get('courses', {}), after.get('courses', {})));
+    }
+
+    // Courses can be added (a round's own copy), never changed or removed.
+    function onlyAdded(b, a) {
+      return a.diff(b).changedKeys().size() == 0 && a.diff(b).removedKeys().size() == 0;
+    }
+
+    // No rounds added or removed, and within each round only scores and card
+    // signatures change — never the handicap lock. A course can be set on a
+    // round that doesn't have one yet.
+    function roundsOk(b, a) {
+      return a.diff(b).addedKeys().size() == 0
+        && a.diff(b).removedKeys().size() == 0
+        && roundOk(b, a, '1') && roundOk(b, a, '2') && roundOk(b, a, '3')
+        && roundOk(b, a, '4') && roundOk(b, a, '5') && roundOk(b, a, '6');
+    }
+
+    function roundOk(b, a, r) {
+      return !(r in a)
+        || (a[r].diff(b[r]).affectedKeys().hasOnly(['scores', 'signOff', 'courseId'])
+            && (!('courseId' in a[r].diff(b[r]).affectedKeys()) || b[r].get('courseId', null) == null));
+    }
+
+    // Games: only closest-to-the-pin results. Pots and settings are organizers'.
+    function gamesOk(b, a) {
+      return a.diff(b).affectedKeys().hasOnly(['ctp'])
+        && a.get('ctp', {}).diff(b.get('ctp', {})).affectedKeys().hasOnly(['results', 'distances', 'log']);
     }
   }
 }

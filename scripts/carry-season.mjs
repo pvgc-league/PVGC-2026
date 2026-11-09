@@ -20,6 +20,8 @@ import fs from "fs";
 import firebase from "firebase/compat/app";
 import "firebase/compat/firestore";
 import "firebase/compat/auth";
+import { createRequire } from "module";
+const { signInByEmailLink } = createRequire(import.meta.url)("./signInByEmailLink.cjs");
 
 const [fromArg, toArg] = process.argv.slice(2);
 const write = process.argv.includes("--write");
@@ -59,7 +61,8 @@ const auth = firebase.auth();
       src = JSON.parse(fs.readFileSync(archive, "utf8")).league;
       console.log(`Source: ${archive}`);
     } else {
-      await auth.signInAnonymously();
+      // League data needs a real sign-in — anonymous is refused by the rules.
+      await signInByEmailLink(auth);
       const snap = await db.collection("pvgc").doc(`league-${from}`).get();
       if (!snap.exists) throw new Error(`league-${from} not found`);
       src = snap.data();
@@ -110,7 +113,7 @@ const auth = firebase.auth();
       process.exit(0);
     }
 
-    if (!auth.currentUser) await auth.signInAnonymously();
+    await signInByEmailLink(auth);
     await db.collection("pvgc").doc(`league-${to}`).set(payload, { merge: true });
     console.log(`\n✓ Written to pvgc/league-${to}`);
     process.exit(0);

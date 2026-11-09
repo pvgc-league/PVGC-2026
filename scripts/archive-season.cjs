@@ -19,6 +19,7 @@ const path = require("path");
 const firebase = require("firebase/compat/app");
 require("firebase/compat/firestore");
 require("firebase/compat/auth");
+const { signInByEmailLink } = require("./signInByEmailLink.cjs");
 
 const year = parseInt(process.argv[2], 10);
 if (!year) {
@@ -47,7 +48,8 @@ async function dumpCollection(name) {
 
 (async () => {
   try {
-    await auth.signInAnonymously();
+    // League data needs a real sign-in — anonymous is refused by the rules.
+    await signInByEmailLink(auth);
     console.log(`Reading league-${year} …`);
 
     const docSnap = await DOC.get();
