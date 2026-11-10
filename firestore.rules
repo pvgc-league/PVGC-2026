@@ -60,11 +60,18 @@ service cloud.firestore {
 
       allow update: if poconoOrganizer()
         || (docId == '_casual' && signedIn())
-        || (!(docId in ['_index', '_library', '_casual']) && signedIn() && golferUpdate());
+        || (!(docId in ['_index', '_library', '_casual']) && signedIn() && !archived(docId) && golferUpdate());
 
       match /presence/{sessionId} {
         allow read, write: if signedIn();
       }
+    }
+
+    // An archived weekend is the record: only an organizer can change it (and
+    // only by unarchiving it first, in the app). Pocono 2026 was edited after
+    // it was archived and lost Karl's rounds.
+    function archived(docId) {
+      return get(/databases/$(database)/documents/weekends/_index).data.get(docId, {}).get('archived', false) == true;
     }
 
     // What a golfer may change on a weekend: scores and card signatures, a
